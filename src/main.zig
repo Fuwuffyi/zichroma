@@ -8,10 +8,19 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    // Read command arguments
+    const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+    // Get the file name
+    if (argv.len < 2) {
+        // No file name
+        return error.FileNotFound;
+    }
+    const filename: [:0]const u8 = argv[1];
     // Load the image
     std.debug.print("Loading image...\n", .{});
     var start: i64 = std.time.milliTimestamp();
-    const img: image.Image = try image.Image.init(&allocator, "testing.png");
+    const img: image.Image = try image.Image.init(&allocator, filename);
     defer img.deinit(&allocator);
     var stop: i64 = std.time.milliTimestamp();
     std.debug.print("Loading image took {}ms \n", .{stop - start});
@@ -25,7 +34,7 @@ pub fn main() !void {
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 6, 50);
+    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 12, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
