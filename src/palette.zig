@@ -8,13 +8,13 @@ pub const Palette = struct {
 
     pub fn init(allocator: *const std.mem.Allocator, img: *const image.Image) !@This() {
         // Create list of colors
-        var colors_hashmap: std.AutoHashMap(u128, u32) = std.AutoHashMap(u128, u32).init(allocator.*);
+        var colors_hashmap: std.AutoHashMap(u96, u32) = std.AutoHashMap(u96, u32).init(allocator.*);
         defer colors_hashmap.deinit();
         try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(img.colors.len)));
         // Loop over the image colors
         for (img.colors) |*clr| {
             // Convert rgba to bits and use it as key
-            const key: u128 = @bitCast(clr.*);
+            const key: u96 = @bitCast(clr.*);
             const gop = try colors_hashmap.getOrPut(key);
             // Increase weight for that color if existing
             if (!gop.found_existing) {

@@ -20,7 +20,7 @@ pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, 
             var best_index: usize = undefined;
             var lowest_distance: f32 = std.math.floatMax(f32);
             for (centroids, 0..) |*centroid, centroid_index| {
-                const distance: f32 = @as(f32, @floatFromInt(palette_value.weight)) * (std.math.pow(f32, palette_value.clr.r - centroid.r, 2) + std.math.pow(f32, palette_value.clr.g - centroid.g, 2) + std.math.pow(f32, palette_value.clr.b - centroid.b, 2) + std.math.pow(f32, palette_value.clr.a - centroid.a, 2));
+                const distance: f32 = @as(f32, @floatFromInt(palette_value.weight)) * (std.math.pow(f32, palette_value.clr.r - centroid.r, 2) + std.math.pow(f32, palette_value.clr.g - centroid.g, 2) + std.math.pow(f32, palette_value.clr.b - centroid.b, 2));
                 if (distance < lowest_distance) {
                     lowest_distance = distance;
                     best_index = centroid_index;
@@ -32,20 +32,18 @@ pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, 
         // Calculate average of the colors of a given centroid
         for (centroids, 0..) |*centroid, centroid_index| {
             var cnt: f32 = 0;
-            var sum: image.Color = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+            var sum: image.Color = .{ .r = 0, .g = 0, .b = 0 };
             for (appartains_to, 0..) |appartains_val, appartains_idx| {
                 if (appartains_val != centroid_index) continue;
                 const val: *const palette.Palette.PaletteValue = &pal.values[appartains_idx];
                 sum.r += val.clr.r * @as(f32, @floatFromInt(val.weight));
                 sum.g += val.clr.g * @as(f32, @floatFromInt(val.weight));
                 sum.b += val.clr.b * @as(f32, @floatFromInt(val.weight));
-                sum.a += val.clr.a * @as(f32, @floatFromInt(val.weight));
                 cnt += @as(f32, @floatFromInt(val.weight));
             }
             centroid.r = sum.r / cnt;
             centroid.g = sum.g / cnt;
             centroid.b = sum.b / cnt;
-            centroid.a = sum.a / cnt;
         }
     }
     return centroids;
