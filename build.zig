@@ -12,6 +12,12 @@ pub fn build(b: *std.Build) void {
         .name = "colortheme_generator",
         .root_module = exe_mod,
     });
+    // Add zigimg
+    const zigimg_dependency = b.dependency("zigimg", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
     b.installArtifact(exe);
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
