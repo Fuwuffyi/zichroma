@@ -14,10 +14,6 @@ pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, 
     // Create array to store the cluster the color appartains to
     var appartains_to: []usize = try allocator.alloc(usize, pal.values.len);
     for (0..iters) |_| {
-        for (centroids) |*col| {
-            std.debug.print("\x1B[48;2;{};{};{}m     ", .{ @as(u32, @intFromFloat(col.r * 255)), @as(u32, @intFromFloat(col.g * 255)), @as(u32, @intFromFloat(col.b * 255)) });
-        }
-        std.debug.print("\n", .{});
         // Loop through palette
         for (pal.values, 0..) |*palette_value, palette_index| {
             // Calculate closest centroid
