@@ -1,9 +1,9 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
-const pixel = @import("pixel.zig");
+const color = @import("color.zig");
 
 pub const Image = struct {
-    colors: [][]pixel.Pixel,
+    colors: []color.Color,
     width: u32,
     height: u32,
 
@@ -15,27 +15,18 @@ pub const Image = struct {
         var loaded_image = try zigimg.Image.fromFile(allocator.*, &file);
         defer loaded_image.deinit();
         // Create the new image
-        var image: Image = .{ .colors = undefined, .width = @intCast(loaded_image.width), .height = @intCast(loaded_image.height) };
-        image.colors = try allocator.alloc([]pixel.Pixel, image.width);
-        for (image.colors) |*color_row| {
-            color_row.* = try allocator.alloc(pixel.Pixel, image.height);
-        }
+        var image: Image = .{ .colors = try allocator.alloc(color.Color, loaded_image.width * loaded_image.height), .width = @intCast(loaded_image.width), .height = @intCast(loaded_image.height) };
         // Get the image colors
         var color_iterator = loaded_image.iterator();
         var counter: usize = 0;
-        while (color_iterator.next()) |*color| : (counter += 1) {
-            const col_idx: usize = counter % image.width;
-            const row_idx: usize = counter / image.width;
-            image.colors[row_idx][col_idx] = .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
+        while (color_iterator.next()) |*c| : (counter += 1) {
+            image.colors[counter] = .{ .r = c.r, .g = c.g, .b = c.b, .a = c.a };
         }
         // Return the new struct
         return image;
     }
 
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
-        defer allocator.free(self.colors);
-        for (self.colors) |*color_row| {
-            allocator.free(color_row.*);
-        }
+        allocator.free(self.colors);
     }
 };

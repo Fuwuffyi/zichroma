@@ -11,9 +11,7 @@ pub fn main() !void {
     defer img.deinit(&allocator);
     // Do stuff
     std.debug.print("{} {}\n", .{ img.width, img.height });
-    for (img.colors) |*row| {
-        for (row.*) |*col| {
-            std.debug.print("{} {} {} {}\n", .{ col.r, col.g, col.b, col.a });
-        }
+    for (img.colors) |*col| {
+        std.debug.print("{} {} {} {}\n", .{ col.r, col.g, col.b, col.a });
     }
 }
