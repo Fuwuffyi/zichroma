@@ -2,48 +2,71 @@ const std = @import("std");
 const palette = @import("palette.zig");
 const image = @import("image.zig");
 
+const ClusteringError = error{
+    EmptyPalette,
+    InvalidK,
+};
+
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
 pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]const image.Color {
+    // Error checking
+    const k_usize: usize = @intCast(k);
+    if (pal.values.len == 0) return error.EmptyPalette;
+    if (k_usize == 0) return error.InvalidK;
     // Generate "random" centroids
-    const centroids: []image.Color = try allocator.alloc(image.Color, k);
+    const centroids: []image.Color = try allocator.alloc(image.Color, k_usize);
+    errdefer allocator.free(centroids);
     for (centroids) |*centroid| {
         centroid.* = pal.values[random.int(usize) % pal.values.len].clr;
     }
+    // Preallocate accumulators
+    var sum_r: []f32 = try allocator.alloc(f32, k_usize);
+    defer allocator.free(sum_r);
+    var sum_g: []f32 = try allocator.alloc(f32, k_usize);
+    defer allocator.free(sum_g);
+    var sum_b: []f32 = try allocator.alloc(f32, k_usize);
+    defer allocator.free(sum_b);
+    var total_weight: []f32 = try allocator.alloc(f32, k_usize);
+    defer allocator.free(total_weight);
     // Create array to store the cluster the color appartains to
-    var appartains_to: []usize = try allocator.alloc(usize, pal.values.len);
     for (0..iters) |_| {
+        // Reset accumulators
+        @memset(sum_r, 0.0);
+        @memset(sum_g, 0.0);
+        @memset(sum_b, 0.0);
+        @memset(total_weight, 0.0);
         // Loop through palette
-        for (pal.values, 0..) |*palette_value, palette_index| {
-            // Calculate closest centroid
-            var best_index: usize = undefined;
-            var lowest_distance: f32 = std.math.floatMax(f32);
-            for (centroids, 0..) |*centroid, centroid_index| {
-                const distance: f32 = @as(f32, @floatFromInt(palette_value.weight)) * (std.math.pow(f32, palette_value.clr.r - centroid.r, 2) + std.math.pow(f32, palette_value.clr.g - centroid.g, 2) + std.math.pow(f32, palette_value.clr.b - centroid.b, 2));
-                if (distance < lowest_distance) {
-                    lowest_distance = distance;
-                    best_index = centroid_index;
+        for (pal.values) |value| {
+            // Update cluster values based on closest one to cluster center
+            var best_idx: usize = 0;
+            var min_dist: f32 = std.math.floatMax(f32);
+            const weight: f32 = @as(f32, @floatFromInt(value.weight));
+            for (centroids, 0..) |centroid, idx| {
+                const dr = value.clr.r - centroid.r;
+                const dg = value.clr.g - centroid.g;
+                const db = value.clr.b - centroid.b;
+                const dist_sq = dr * dr + dg * dg + db * db;
+                const weighted_dist = weight * dist_sq;
+                if (weighted_dist < min_dist) {
+                    min_dist = weighted_dist;
+                    best_idx = idx;
                 }
             }
-            // Set color to appartain to that closest centroid
-            appartains_to[palette_index] = best_index;
+            // Increase accumulators
+            sum_r[best_idx] += value.clr.r * weight;
+            sum_g[best_idx] += value.clr.g * weight;
+            sum_b[best_idx] += value.clr.b * weight;
+            total_weight[best_idx] += weight;
         }
-        // Calculate average of the colors of a given centroid
-        for (centroids, 0..) |*centroid, centroid_index| {
-            var cnt: f32 = 0;
-            var sum: image.Color = .{ .r = 0, .g = 0, .b = 0 };
-            for (appartains_to, 0..) |appartains_val, appartains_idx| {
-                if (appartains_val != centroid_index) continue;
-                const val: *const palette.Palette.PaletteValue = &pal.values[appartains_idx];
-                sum.r += val.clr.r * @as(f32, @floatFromInt(val.weight));
-                sum.g += val.clr.g * @as(f32, @floatFromInt(val.weight));
-                sum.b += val.clr.b * @as(f32, @floatFromInt(val.weight));
-                cnt += @as(f32, @floatFromInt(val.weight));
-            }
-            centroid.r = sum.r / cnt;
-            centroid.g = sum.g / cnt;
-            centroid.b = sum.b / cnt;
+        // Update centroids
+        for (centroids, 0..) |*centroid, i| {
+            const tw: f32 = total_weight[i];
+            if (tw == 0) continue;
+            centroid.r = sum_r[i] / tw;
+            centroid.g = sum_g[i] / tw;
+            centroid.b = sum_b[i] / tw;
         }
     }
     return centroids;

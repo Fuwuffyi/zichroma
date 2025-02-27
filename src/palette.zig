@@ -24,7 +24,7 @@ pub const Palette = struct {
             }
         }
         // Directly allocate the result slice with precise sizing
-        const count = colors_hashmap.count();
+        const count: u32 = colors_hashmap.count();
         const values: []PaletteValue = try allocator.*.alloc(PaletteValue, count);
         // Populate the array directly using iterator
         var it = colors_hashmap.iterator();

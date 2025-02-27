@@ -34,7 +34,7 @@ pub fn main() !void {
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 12, 50);
+    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
