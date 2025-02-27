@@ -1,9 +1,10 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
-const color = @import("color.zig");
+
+pub const Color = packed struct { r: f32, g: f32, b: f32, a: f32 };
 
 pub const Image = struct {
-    colors: []color.Color,
+    colors: []Color,
     width: u32,
     height: u32,
 
@@ -15,7 +16,7 @@ pub const Image = struct {
         var loaded_image = try zigimg.Image.fromFile(allocator.*, &file);
         defer loaded_image.deinit();
         // Create the new image
-        var image: Image = .{ .colors = try allocator.alloc(color.Color, loaded_image.width * loaded_image.height), .width = @intCast(loaded_image.width), .height = @intCast(loaded_image.height) };
+        var image: Image = .{ .colors = try allocator.alloc(Color, loaded_image.width * loaded_image.height), .width = @intCast(loaded_image.width), .height = @intCast(loaded_image.height) };
         // Get the image colors
         var color_iterator = loaded_image.iterator();
         var counter: usize = 0;

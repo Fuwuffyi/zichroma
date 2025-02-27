@@ -1,9 +1,8 @@
 const std = @import("std");
-const color = @import("color.zig");
 const image = @import("image.zig");
 
 pub const Palette = struct {
-    const PaletteValue = packed struct { clr: color.Color, weight: u32 };
+    pub const PaletteValue = struct { clr: image.Color, weight: u32 };
 
     values: []const PaletteValue,
 
@@ -31,7 +30,7 @@ pub const Palette = struct {
         // Read weight values and create the list of unique colors
         var it = colors_hashmap.iterator();
         while (it.next()) |*entry| {
-            const clr: color.Color = @bitCast(entry.key_ptr.*);
+            const clr: image.Color = @bitCast(entry.key_ptr.*);
             colors_list.appendAssumeCapacity(.{ .clr = clr, .weight = entry.value_ptr.* });
         }
         // Create the palette

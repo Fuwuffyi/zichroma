@@ -1,7 +1,7 @@
 const std = @import("std");
 const image = @import("image.zig");
 const palette = @import("palette.zig");
-const color = @import("color.zig");
+const clustering = @import("clustering.zig");
 
 pub fn main() !void {
     // Create an allocator
@@ -16,9 +16,13 @@ pub fn main() !void {
     std.debug.print("Loading palette...\n", .{});
     const pal: palette.Palette = try palette.Palette.init(&allocator, &img);
     defer pal.deinit(&allocator);
+    // Get clustering data
+    std.debug.print("Generating clusters...\n", .{});
+    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal);
+    defer allocator.free(clusters);
     // Do stuff
-    for (pal.values) |*value| {
-        const col: *const color.Color = &value.clr;
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0mInstances: {}\n", .{ @as(u32, @intFromFloat(col.r * 255)), @as(u32, @intFromFloat(col.g * 255)), @as(u32, @intFromFloat(col.b * 255)), value.weight });
+    for (clusters) |*col| {
+        std.debug.print("\x1B[48;2;{};{};{}m     ", .{ @as(u32, @intFromFloat(col.r * 255)), @as(u32, @intFromFloat(col.g * 255)), @as(u32, @intFromFloat(col.b * 255)) });
     }
+    std.debug.print("\n", .{});
 }
