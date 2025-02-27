@@ -2,16 +2,18 @@ const std = @import("std");
 const palette = @import("palette.zig");
 const image = @import("image.zig");
 
-pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette) ![]const image.Color {
+var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
+const random: std.Random = random_generator.random();
+
+pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]const image.Color {
     // Generate "random" centroids
-    var centroids: []image.Color = try allocator.alloc(image.Color, 4);
-    centroids[0] = pal.values[0].clr;
-    centroids[1] = pal.values[1].clr;
-    centroids[2] = pal.values[2].clr;
-    centroids[3] = pal.values[3].clr;
+    const centroids: []image.Color = try allocator.alloc(image.Color, k);
+    for (centroids) |*centroid| {
+        centroid.* = pal.values[random.int(usize) % pal.values.len].clr;
+    }
     // Create array to store the cluster the color appartains to
     var appartains_to: []usize = try allocator.alloc(usize, pal.values.len);
-    for (0..100) |_| {
+    for (0..iters) |_| {
         for (centroids) |*col| {
             std.debug.print("\x1B[48;2;{};{};{}m     ", .{ @as(u32, @intFromFloat(col.r * 255)), @as(u32, @intFromFloat(col.g * 255)), @as(u32, @intFromFloat(col.b * 255)) });
         }

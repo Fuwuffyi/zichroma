@@ -18,7 +18,7 @@ pub fn main() !void {
     defer pal.deinit(&allocator);
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
-    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal);
+    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 6, 50);
     defer allocator.free(clusters);
     // Do stuff
     for (clusters) |*col| {
