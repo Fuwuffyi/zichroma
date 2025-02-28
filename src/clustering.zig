@@ -45,7 +45,7 @@ pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, 
             var min_dist: f32 = std.math.floatMax(f32);
             const weight: f32 = @as(f32, @floatFromInt(value.weight));
             for (centroids, 0..) |*centroid, idx| {
-                const dist_sq: f32 = value.clr.dst_squared(centroid);
+                const dist_sq: f32 = value.clr.dst_squared_redman(centroid);
                 const weighted_dist: f32 = weight * dist_sq;
                 if (weighted_dist < min_dist) {
                     min_dist = weighted_dist;
