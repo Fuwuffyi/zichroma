@@ -1,6 +1,7 @@
 const std = @import("std");
 const palette = @import("palette.zig");
 const image = @import("image.zig");
+const color = @import("color.zig");
 
 const ClusteringError = error{
     EmptyPalette,
@@ -10,13 +11,13 @@ const ClusteringError = error{
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
-pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]const image.Color {
+pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]const color.Color {
     // Error checking
     const k_usize: usize = @intCast(k);
     if (pal.values.len == 0) return error.EmptyPalette;
     if (k_usize == 0) return error.InvalidK;
     // Generate "random" centroids
-    const centroids: []image.Color = try allocator.alloc(image.Color, k_usize);
+    const centroids: []color.Color = try allocator.alloc(color.Color, k_usize);
     errdefer allocator.free(centroids);
     for (centroids) |*centroid| {
         centroid.* = pal.values[random.int(usize) % pal.values.len].clr;
@@ -43,12 +44,9 @@ pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, 
             var best_idx: usize = 0;
             var min_dist: f32 = std.math.floatMax(f32);
             const weight: f32 = @as(f32, @floatFromInt(value.weight));
-            for (centroids, 0..) |centroid, idx| {
-                const dr = value.clr.r - centroid.r;
-                const dg = value.clr.g - centroid.g;
-                const db = value.clr.b - centroid.b;
-                const dist_sq = dr * dr + dg * dg + db * db;
-                const weighted_dist = weight * dist_sq;
+            for (centroids, 0..) |*centroid, idx| {
+                const dist_sq: f32 = value.clr.dst_squared(centroid);
+                const weighted_dist: f32 = weight * dist_sq;
                 if (weighted_dist < min_dist) {
                     min_dist = weighted_dist;
                     best_idx = idx;

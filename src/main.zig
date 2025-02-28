@@ -1,13 +1,14 @@
 const std = @import("std");
+const color = @import("color.zig");
 const image = @import("image.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 
 pub fn main() !void {
     // Create an allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.GeneralPurposeAllocator(.{}) = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator: std.mem.Allocator = gpa.allocator();
     // Read command arguments
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
@@ -34,7 +35,7 @@ pub fn main() !void {
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []const image.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
+    const clusters: []const color.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});

@@ -1,8 +1,9 @@
 const std = @import("std");
 const image = @import("image.zig");
+const color = @import("color.zig");
 
 pub const Palette = struct {
-    pub const PaletteValue = struct { clr: image.Color, weight: u32 };
+    pub const PaletteValue = struct { clr: color.Color, weight: u32 };
 
     values: []const PaletteValue,
 
