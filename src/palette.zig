@@ -42,4 +42,14 @@ pub const Palette = struct {
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         allocator.*.free(self.values);
     }
+
+    pub fn is_light(self: *const @This()) bool {
+        var brightness_sum: f32 = 0;
+        var brightness_weights: f32 = 0;
+        for (self.values) |*palette_value| {
+            brightness_sum += palette_value.clr.brightness() * @as(f32, @floatFromInt(palette_value.weight));
+            brightness_weights += @floatFromInt(palette_value.weight);
+        }
+        return (brightness_sum / brightness_weights) > 0.5;
+    }
 };

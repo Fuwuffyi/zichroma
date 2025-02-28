@@ -5,6 +5,10 @@ pub const Color = packed struct {
     g: f32,
     b: f32,
 
+    pub fn brightness(self: *const @This()) f32 {
+        return @sqrt(0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b);
+    }
+
     // Euclidean distance calculation
     // Efficiency: High
     // Percieved Color: Low

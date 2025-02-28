@@ -1,8 +1,16 @@
 const std = @import("std");
+const config = @import("config.zig");
 const color = @import("color.zig");
 const image = @import("image.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
+
+// TODO: Generate accent colors using color curves
+// TODO: Generate text color by inverting primary colors
+// TODO: Cache the palette values to external file to not do this every program execution
+// TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
+// TODO: Improve kmeans clustering through k-means++ initialization and threshold checking
+// TODO: Add more clustering functions
 
 pub fn main() !void {
     // Create an allocator
@@ -12,16 +20,12 @@ pub fn main() !void {
     // Read command arguments
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
-    // Get the file name
-    if (argv.len < 2) {
-        // No file name
-        return error.FileNotFound;
-    }
-    const filename: [:0]const u8 = argv[1];
+    const conf: config.Config = try config.Config.init(&allocator, argv);
+    defer conf.deinit(&allocator);
     // Load the image
     std.debug.print("Loading image...\n", .{});
     var start: i64 = std.time.milliTimestamp();
-    const img: image.Image = try image.Image.init(&allocator, filename);
+    const img: image.Image = try image.Image.init(&allocator, conf.image_path);
     defer img.deinit(&allocator);
     var stop: i64 = std.time.milliTimestamp();
     std.debug.print("Loading image took {}ms \n", .{stop - start});
@@ -32,10 +36,13 @@ pub fn main() !void {
     defer pal.deinit(&allocator);
     stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
+    // Check if image is light or dark themed
+    const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.is_light();
+    std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []const color.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
+    const clusters: []color.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});

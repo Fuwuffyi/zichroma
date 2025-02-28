@@ -3,15 +3,10 @@ const palette = @import("palette.zig");
 const image = @import("image.zig");
 const color = @import("color.zig");
 
-const ClusteringError = error{
-    EmptyPalette,
-    InvalidK,
-};
-
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
-pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]const color.Color {
+pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.Color {
     // Error checking
     const k_usize: usize = @intCast(k);
     if (pal.values.len == 0) return error.EmptyPalette;
