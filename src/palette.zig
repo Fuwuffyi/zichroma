@@ -3,7 +3,7 @@ const image = @import("image.zig");
 const color = @import("color.zig");
 
 pub const Palette = struct {
-    pub const PaletteValue = struct { clr: color.Color, weight: u32 };
+    pub const PaletteValue = struct { clr: color.ColorHSL, weight: u32 };
 
     values: []const PaletteValue,
 
@@ -32,7 +32,7 @@ pub const Palette = struct {
         var i: usize = 0;
         while (it.next()) |entry| : (i += 1) {
             values[i] = .{
-                .clr = @bitCast(entry.key_ptr.*),
+                .clr = @as(color.ColorRGB, @bitCast(entry.key_ptr.*)).toHSL(),
                 .weight = entry.value_ptr.*,
             };
         }
@@ -47,7 +47,7 @@ pub const Palette = struct {
         var brightness_sum: f32 = 0;
         var brightness_weights: f32 = 0;
         for (self.values) |*palette_value| {
-            brightness_sum += palette_value.clr.brightness() * @as(f32, @floatFromInt(palette_value.weight));
+            brightness_sum += palette_value.clr.l;
             brightness_weights += @floatFromInt(palette_value.weight);
         }
         return (brightness_sum / brightness_weights) > 0.5;

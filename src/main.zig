@@ -5,8 +5,6 @@ const image = @import("image.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 
-// TODO: Generate accent colors using color curves
-// TODO: Generate text color by inverting primary colors
 // TODO: Cache the palette values to external file to not do this every program execution
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization and threshold checking
@@ -42,13 +40,19 @@ pub fn main() !void {
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []color.Color = try clustering.kmeans(&allocator, &pal, 4, 50);
+    const clusters: []color.ColorHSL = try clustering.kmeans(&allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
+
+    // TODO: Sort clusters based on image brightness
+    // TODO: Generate text colors
+    // TODO: Generate accent colors (color curves)
+
     // Do stuff
     for (clusters) |*col| {
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col.r * 255)), @as(u32, @intFromFloat(col.g * 255)), @as(u32, @intFromFloat(col.b * 255)) });
+        const col_rgb: color.ColorRGB = col.toRGB();
+        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
     }
     std.debug.print("\n", .{});
 }

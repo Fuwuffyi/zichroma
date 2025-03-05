@@ -3,7 +3,7 @@ const zigimg = @import("zigimg");
 const color = @import("color.zig");
 
 pub const Image = struct {
-    colors: []color.Color,
+    colors: []color.ColorRGB,
     width: u32,
     height: u32,
 
@@ -16,7 +16,7 @@ pub const Image = struct {
         const height: u32 = @intCast(loaded_image.height);
         const len: usize = width * height;
         // Create the new image
-        var image: Image = .{ .colors = try allocator.alloc(color.Color, len), .width = width, .height = height };
+        var image: Image = .{ .colors = try allocator.alloc(color.ColorRGB, len), .width = width, .height = height };
         // Get the image colors
         var color_iterator = loaded_image.iterator();
         var counter: usize = 0;
