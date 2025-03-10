@@ -42,7 +42,7 @@ pub const Palette = struct {
         allocator.free(self.values);
     }
 
-    pub fn is_light(self: *const @This()) bool {
+    pub fn isLight(self: *const @This()) bool {
         var total: f32 = 0.0;
         var weight_sum: f32 = 0.0;
         for (self.values) |val| {

@@ -36,7 +36,7 @@ pub fn main() !void {
     stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
     // Check if image is light or dark themed
-    const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.is_light();
+    const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
     std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
