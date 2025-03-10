@@ -5,27 +5,8 @@ pub const ColorRGB = packed struct {
     g: f32,
     b: f32,
 
-    // Euclidean distance calculation
-    // Efficiency: High
-    // Percieved Color: Lower
-    // UNUSED
-    pub fn dst_squared(self: *const @This(), other: *const ColorRGB) f32 {
-        const dr: f32 = self.r - other.r;
-        const dg: f32 = self.g - other.g;
-        const db: f32 = self.b - other.b;
-        return dr * dr + dg * dg + db * db;
-    }
-
-    // Redman distance calculation
-    // Efficiency: High
-    // Percieved Color: Low
-    // UNUSED
-    pub fn dst_squared_redman(self: *const @This(), other: *const ColorRGB) f32 {
-        const r: f32 = (self.r + other.r) * 0.5;
-        const dr: f32 = self.r - other.r;
-        const dg: f32 = self.g - other.g;
-        const db: f32 = self.b - other.b;
-        return (2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db;
+    pub fn negative(self: *const @This()) ColorRGB {
+        return .{ .r = 1.0 - self.r, .g = 1.0 - self.g, .b = 1.0 - self.b };
     }
 
     pub fn toHSL(rgb: *const @This()) ColorHSL {
@@ -73,6 +54,10 @@ pub const ColorHSL = packed struct {
         const dy: f32 = y1 - y2;
         const dl: f32 = self.l - other.l;
         return dx * dx + dy * dy + dl * dl;
+    }
+
+    pub fn negative(self: *const @This()) ColorHSL {
+        return .{ .h = @mod((self.h + 180.0), 360.0), .s = 1.0 - self.s, .l = 1.0 - self.l };
     }
 
     pub fn toRGB(hsl: *const @This()) ColorRGB {
