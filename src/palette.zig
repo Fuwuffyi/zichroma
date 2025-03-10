@@ -3,13 +3,13 @@ const image = @import("image.zig");
 const color = @import("color.zig");
 
 pub const Palette = struct {
-    pub const PaletteValue = struct { clr: color.ColorHSL, weight: u32 };
+    pub const Value = struct { clr: color.ColorHSL, weight: u32 };
 
-    values: []const PaletteValue,
+    values: []const Value,
 
-    pub fn init(allocator: *const std.mem.Allocator, img: *const image.Image) !@This() {
+    pub fn init(allocator: std.mem.Allocator, img: *const image.Image) !@This() {
         // Create list of colors
-        var colors_hashmap: std.AutoHashMap(u96, u32) = std.AutoHashMap(u96, u32).init(allocator.*);
+        var colors_hashmap: std.AutoHashMap(u96, u32) = std.AutoHashMap(u96, u32).init(allocator);
         defer colors_hashmap.deinit();
         try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(img.colors.len)));
         // Loop over the image colors
@@ -18,15 +18,14 @@ pub const Palette = struct {
             const key: u96 = @bitCast(clr);
             const gop = try colors_hashmap.getOrPut(key);
             // Increase weight for that color if existing
-            if (!gop.found_existing) {
-                gop.value_ptr.* = 1;
-            } else {
+            if (gop.found_existing) {
                 gop.value_ptr.* += 1;
+            } else {
+                gop.value_ptr.* = 1;
             }
         }
         // Directly allocate the result slice with precise sizing
-        const count: u32 = colors_hashmap.count();
-        const values: []PaletteValue = try allocator.*.alloc(PaletteValue, count);
+        const values: []Value = try allocator.alloc(Value, colors_hashmap.count());
         // Populate the array directly using iterator
         var it = colors_hashmap.iterator();
         var i: usize = 0;
@@ -39,17 +38,17 @@ pub const Palette = struct {
         return .{ .values = values };
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
-        allocator.*.free(self.values);
+    pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
+        allocator.free(self.values);
     }
 
     pub fn is_light(self: *const @This()) bool {
-        var brightness_sum: f32 = 0;
-        var brightness_weights: f32 = 0;
-        for (self.values) |*palette_value| {
-            brightness_sum += palette_value.clr.l;
-            brightness_weights += @floatFromInt(palette_value.weight);
+        var total: f32 = 0.0;
+        var weight_sum: f32 = 0.0;
+        for (self.values) |val| {
+            total += val.clr.l * @as(f32, @floatFromInt(val.weight));
+            weight_sum += @floatFromInt(val.weight);
         }
-        return (brightness_sum / brightness_weights) > 0.5;
+        return total / weight_sum > 0.5;
     }
 };

@@ -6,7 +6,7 @@ const color = @import("color.zig");
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
-pub fn kmeans(allocator: *const std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.ColorHSL {
+pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.ColorHSL {
     // Error checking
     const k_usize: usize = @intCast(k);
     if (pal.values.len == 0) return error.EmptyPalette;

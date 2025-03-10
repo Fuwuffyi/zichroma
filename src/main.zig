@@ -19,20 +19,20 @@ pub fn main() !void {
     // Read command arguments
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
-    const conf: config.Config = try config.Config.init(&allocator, argv);
-    defer conf.deinit(&allocator);
+    const conf: config.Config = try config.Config.init(allocator, argv);
+    defer conf.deinit(allocator);
     // Load the image
     std.debug.print("Loading image...\n", .{});
     var start: i64 = std.time.milliTimestamp();
-    const img: image.Image = try image.Image.init(&allocator, conf.image_path);
-    defer img.deinit(&allocator);
+    const img: image.Image = try image.Image.init(allocator, conf.image_path);
+    defer img.deinit(allocator);
     var stop: i64 = std.time.milliTimestamp();
     std.debug.print("Loading image took {}ms \n", .{stop - start});
     // Create the weighted palette from the image
     std.debug.print("Loading palette...\n", .{});
     start = std.time.milliTimestamp();
-    const pal: palette.Palette = try palette.Palette.init(&allocator, &img);
-    defer pal.deinit(&allocator);
+    const pal: palette.Palette = try palette.Palette.init(allocator, &img);
+    defer pal.deinit(allocator);
     stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
     // Check if image is light or dark themed
@@ -41,7 +41,7 @@ pub fn main() !void {
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []color.ColorHSL = try clustering.kmeans(&allocator, &pal, 4, 50);
+    const clusters: []color.ColorHSL = try clustering.kmeans(allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
@@ -56,7 +56,7 @@ pub fn main() !void {
         const col_rgb: color.ColorRGB = col.toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
         // Accent colors
-        const new_cols: []color.ColorHSL = test_curve.applyCurve(&allocator, col);
+        const new_cols: []color.ColorHSL = test_curve.applyCurve(allocator, col);
         defer allocator.free(new_cols);
         for (new_cols) |*col_acc| {
             const col_acc_rgb: color.ColorRGB = col_acc.toRGB();

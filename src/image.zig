@@ -7,9 +7,9 @@ pub const Image = struct {
     width: u32,
     height: u32,
 
-    pub fn init(allocator: *const std.mem.Allocator, filepath: []const u8) !@This() {
+    pub fn init(allocator: std.mem.Allocator, filepath: []const u8) !@This() {
         // Load the image file through zigimg
-        var loaded_image = try zigimg.Image.fromFilePath(allocator.*, filepath);
+        var loaded_image = try zigimg.Image.fromFilePath(allocator, filepath);
         defer loaded_image.deinit();
         // Get image data
         const width: u32 = @intCast(loaded_image.width);
@@ -31,7 +31,7 @@ pub const Image = struct {
         return image;
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.colors);
     }
 };

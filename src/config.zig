@@ -4,7 +4,7 @@ pub const Config = struct {
     image_path: []const u8,
     light_mode: ?bool,
 
-    pub fn init(allocator: *const std.mem.Allocator, argv: [][:0]u8) !@This() {
+    pub fn init(allocator: std.mem.Allocator, argv: [][:0]u8) !@This() {
         // Setup empty configuration
         var config: Config = undefined;
         config.light_mode = null;
@@ -39,7 +39,7 @@ pub const Config = struct {
         return config;
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.image_path);
     }
 };

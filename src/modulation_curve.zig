@@ -10,7 +10,7 @@ pub const ModulationCurve = struct {
         return .{ .curve_values = curve_values };
     }
 
-    pub fn applyCurve(self: *const @This(), allocator: *const std.mem.Allocator, clr: *const color.ColorHSL) []color.ColorHSL {
+    pub fn applyCurve(self: *const @This(), allocator: std.mem.Allocator, clr: *const color.ColorHSL) []color.ColorHSL {
         var colors: []color.ColorHSL = allocator.alloc(color.ColorHSL, 2) catch unreachable;
         // Apply curve to the input color
         for (self.curve_values, 0..) |*modulation_value, idx| {
