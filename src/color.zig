@@ -5,29 +5,25 @@ pub const ColorRGB = packed struct {
     g: f32,
     b: f32,
 
-    pub fn toHSL(rgb: *const @This()) ColorHSL {
-        const r: f32 = rgb.r;
-        const g: f32 = rgb.g;
-        const b: f32 = rgb.b;
-        const max: f32 = @max(r, @max(g, b));
-        const min: f32 = @min(r, @min(g, b));
+    pub fn toHSL(self: *const @This()) ColorHSL {
+        const max: f32 = @max(self.r, @max(self.g, self.b));
+        const min: f32 = @min(self.r, @min(self.g, self.b));
         const delta: f32 = max - min;
-        var h: f32 = 0;
+        var h: f32 = 0.0;
         if (delta != 0) {
-            if (max == r) {
-                h = (g - b) / delta;
-            } else if (max == g) {
-                h = 2 + (b - r) / delta;
+            if (max == self.r) {
+                h = (self.g - self.b) / delta;
+            } else if (max == self.g) {
+                h = 2.0 + (self.b - self.r) / delta;
             } else {
-                h = 4 + (r - g) / delta;
+                h = 4.0 + (self.r - self.g) / delta;
             }
+            h *= 60.0;
         }
-        h *= 60;
-        if (h < 0) {
-            h += 360;
-        }
-        const l: f32 = (max + min) / 2;
-        return .{ .h = h, .s = if (delta == 0) 0 else delta / (1 - @abs(2 * l - 1)), .l = l };
+        h = @mod(h, 360.0);
+        const l = (max + min) / 2.0;
+        const s: f32 = if (delta == 0) 0.0 else delta / (1.0 - @abs(2.0 * l - 1.0));
+        return .{ .h = h, .s = s, .l = l };
     }
 };
 
@@ -40,12 +36,12 @@ pub const ColorHSL = packed struct {
     // Efficiency: Medium-High
     // Percieved Color: Lower
     pub fn dst_squared(self: *const @This(), other: *const ColorHSL) f32 {
-        const h1_rad: f32 = self.h * std.math.pi / 180;
-        const h2_rad: f32 = other.h * std.math.pi / 180;
-        const x1: f32 = self.s * std.math.cos(h1_rad);
-        const y1: f32 = self.s * std.math.sin(h1_rad);
-        const x2: f32 = other.s * std.math.cos(h2_rad);
-        const y2: f32 = other.s * std.math.sin(h2_rad);
+        const h1_rad: f32 = std.math.degreesToRadians(self.h);
+        const h2_rad: f32 = std.math.degreesToRadians(other.h);
+        const x1: f32 = self.s * @cos(h1_rad);
+        const y1: f32 = self.s * @sin(h1_rad);
+        const x2: f32 = other.s * @cos(h2_rad);
+        const y2: f32 = other.s * @sin(h2_rad);
         const dx: f32 = x1 - x2;
         const dy: f32 = y1 - y2;
         const dl: f32 = self.l - other.l;
@@ -57,63 +53,57 @@ pub const ColorHSL = packed struct {
     }
 
     pub fn modulate(self: *const @This(), h_mod: f32, s_mod: f32, l_mod: f32) ColorHSL {
-        const new_h: f32 = @mod(self.h + h_mod, 360.0);
-        var new_s: f32 = self.s * s_mod;
-        var new_l: f32 = self.l * l_mod;
-        if (new_s < 0.0) {
-            new_s = 0.0;
-        } else if (new_s > 1.0) {
-            new_s = 1.0;
-        }
-        if (new_l < 0.0) {
-            new_l = 0.0;
-        } else if (new_l > 1.0) {
-            new_l = 1.0;
-        }
-        return .{ .h = new_h, .s = new_s, .l = new_l };
+        return .{
+            .h = @mod(self.h + h_mod, 360.0),
+            .s = std.math.clamp(self.s * s_mod, 0.0, 1.0),
+            .l = std.math.clamp(self.l * l_mod, 0.0, 1.0),
+        };
     }
 
-    pub fn toRGB(hsl: *const @This()) ColorRGB {
-        if (hsl.s == 0) {
-            return ColorRGB{ .r = hsl.l, .g = hsl.l, .b = hsl.l };
+    pub fn toRGB(self: *const @This()) ColorRGB {
+        if (self.s == 0.0) {
+            return .{ .r = self.l, .g = self.l, .b = self.l };
         }
-        const c: f32 = (1 - @abs(2 * hsl.l - 1)) * hsl.s;
-        const h_prime: f32 = hsl.h / 60;
-        const mod2: f32 = h_prime - 2 * @floor(h_prime / 2);
-        const x: f32 = c * (1 - @abs(mod2 - 1));
-        const m: f32 = hsl.l - c / 2;
-        var r1: f32 = 0;
-        var g1: f32 = 0;
-        var b1: f32 = 0;
-        if (h_prime < 1) {
-            r1 = c;
-            g1 = x;
-            b1 = 0;
-        } else if (h_prime < 2) {
-            r1 = x;
-            g1 = c;
-            b1 = 0;
-        } else if (h_prime < 3) {
-            r1 = 0;
-            g1 = c;
-            b1 = x;
-        } else if (h_prime < 4) {
-            r1 = 0;
-            g1 = x;
-            b1 = c;
-        } else if (h_prime < 5) {
-            r1 = x;
-            g1 = 0;
-            b1 = c;
-        } else {
-            r1 = c;
-            g1 = 0;
-            b1 = x;
+        const chroma: f32 = (1.0 - @abs(2.0 * self.l - 1.0)) * self.s;
+        const h_prime: f32 = self.h / 60.0;
+        const sector: u32 = @mod(@as(u32, @intFromFloat(h_prime)), 6);
+        const mod_val: f32 = @mod(h_prime, 2.0);
+        const x: f32 = chroma * (1.0 - @abs(mod_val - 1.0));
+        const m: f32 = self.l - chroma / 2.0;
+        var r: f32 = 0.0;
+        var g: f32 = 0.0;
+        var b: f32 = 0.0;
+        switch (sector) {
+            0 => {
+                r = chroma;
+                g = x;
+            },
+            1 => {
+                r = x;
+                g = chroma;
+            },
+            2 => {
+                g = chroma;
+                b = x;
+            },
+            3 => {
+                g = x;
+                b = chroma;
+            },
+            4 => {
+                r = x;
+                b = chroma;
+            },
+            5 => {
+                r = chroma;
+                b = x;
+            },
+            else => unreachable,
         }
-        return ColorRGB{
-            .r = r1 + m,
-            .g = g1 + m,
-            .b = b1 + m,
+        return .{
+            .r = r + m,
+            .g = g + m,
+            .b = b + m,
         };
     }
 };
