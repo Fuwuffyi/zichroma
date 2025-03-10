@@ -56,7 +56,7 @@ pub fn main() !void {
         const col_rgb: color.ColorRGB = col.toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
         // Accent colors
-        const new_cols: []color.ColorHSL = test_curve.applyCurve(allocator, col);
+        const new_cols: []color.ColorHSL = try test_curve.applyCurve(allocator, col);
         defer allocator.free(new_cols);
         for (new_cols) |*col_acc| {
             const col_acc_rgb: color.ColorRGB = col_acc.toRGB();
