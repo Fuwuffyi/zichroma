@@ -4,6 +4,7 @@ const color = @import("color.zig");
 const image = @import("image.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
+const modulation_curve = @import("modulation_curve.zig");
 
 // TODO: Cache the palette values to external file to not do this every program execution
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
@@ -46,15 +47,25 @@ pub fn main() !void {
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
 
     // TODO: Sort clusters based on image brightness
-    // TODO: Generate accent colors (color curves)
+    const curve: [2]modulation_curve.ModulationValue = .{ .{ .h_mod = 0, .s_mod = 0.9, .l_mod = 0.8 }, .{ .h_mod = 0, .s_mod = 0.8, .l_mod = 0.5 } };
+    const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&curve);
 
     // Do stuff
     for (clusters) |*col| {
+        // Primary color
+        const col_rgb: color.ColorRGB = col.toRGB();
+        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
+        // Accent colors
+        const new_cols: []color.ColorHSL = test_curve.applyCurve(&allocator, col);
+        defer allocator.free(new_cols);
+        for (new_cols) |*col_acc| {
+            const col_acc_rgb: color.ColorRGB = col_acc.toRGB();
+            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.b * 255)) });
+        }
+        // Text color
         var col_neg: color.ColorHSL = col.negative();
         col_neg.h = 0.1;
         const col_neg_rgb: color.ColorRGB = col_neg.modulate(0.0, 1.0, 1.88).toRGB();
-        const col_rgb: color.ColorRGB = col.toRGB();
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
     }
     std.debug.print("\n", .{});
