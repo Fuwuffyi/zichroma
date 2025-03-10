@@ -5,10 +5,6 @@ pub const ColorRGB = packed struct {
     g: f32,
     b: f32,
 
-    pub fn negative(self: *const @This()) ColorRGB {
-        return .{ .r = 1.0 - self.r, .g = 1.0 - self.g, .b = 1.0 - self.b };
-    }
-
     pub fn toHSL(rgb: *const @This()) ColorHSL {
         const r: f32 = rgb.r;
         const g: f32 = rgb.g;
@@ -57,7 +53,24 @@ pub const ColorHSL = packed struct {
     }
 
     pub fn negative(self: *const @This()) ColorHSL {
-        return .{ .h = @mod((self.h + 180.0), 360.0), .s = 1.0 - self.s, .l = 1.0 - self.l };
+        return .{ .h = @mod(self.h + 180.0, 360.0), .s = 1.0 - self.s, .l = 1.0 - self.l };
+    }
+
+    pub fn modulate(self: *const @This(), h_mod: f32, s_mod: f32, l_mod: f32) ColorHSL {
+        const new_h: f32 = @mod(self.h + h_mod, 360.0);
+        var new_s: f32 = self.s * s_mod;
+        var new_l: f32 = self.l * l_mod;
+        if (new_s < 0.0) {
+            new_s = 0.0;
+        } else if (new_s > 1.0) {
+            new_s = 1.0;
+        }
+        if (new_l < 0.0) {
+            new_l = 0.0;
+        } else if (new_l > 1.0) {
+            new_l = 1.0;
+        }
+        return .{ .h = new_h, .s = new_s, .l = new_l };
     }
 
     pub fn toRGB(hsl: *const @This()) ColorRGB {

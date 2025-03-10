@@ -46,13 +46,13 @@ pub fn main() !void {
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
 
     // TODO: Sort clusters based on image brightness
-    // TODO: Generate text colors
     // TODO: Generate accent colors (color curves)
 
     // Do stuff
     for (clusters) |*col| {
-        const col_neg: color.ColorHSL = col.negative();
-        const col_neg_rgb: color.ColorRGB = col_neg.toRGB();
+        var col_neg: color.ColorHSL = col.negative();
+        col_neg.h = 0.1;
+        const col_neg_rgb: color.ColorRGB = col_neg.modulate(0.0, 1.0, 1.88).toRGB();
         const col_rgb: color.ColorRGB = col.toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
