@@ -42,14 +42,14 @@ pub fn main() !void {
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
     // Create the modulation curve for accent colors
     const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&.{
-        .{ .h_mod = 0, .s_mod = 0.18, .l_mod = 0.99 },
-        .{ .h_mod = 0, .s_mod = 0.32, .l_mod = 0.97 },
-        .{ .h_mod = 0, .s_mod = 0.48, .l_mod = 0.95 },
-        .{ .h_mod = 0, .s_mod = 0.55, .l_mod = 0.90 },
-        .{ .h_mod = 0, .s_mod = 0.70, .l_mod = 0.80 },
-        .{ .h_mod = 0, .s_mod = 0.88, .l_mod = 0.60 },
-        .{ .h_mod = 0, .s_mod = 0.94, .l_mod = 0.40 },
-        .{ .h_mod = 0, .s_mod = 0.99, .l_mod = 0.24 },
+        .{ .h_mod = null, .l_mod = 0.18, .s_mod = 0.99 },
+        .{ .h_mod = null, .l_mod = 0.32, .s_mod = 0.97 },
+        .{ .h_mod = null, .l_mod = 0.48, .s_mod = 0.95 },
+        .{ .h_mod = null, .l_mod = 0.55, .s_mod = 0.90 },
+        .{ .h_mod = null, .l_mod = 0.70, .s_mod = 0.80 },
+        .{ .h_mod = null, .l_mod = 0.88, .s_mod = 0.60 },
+        .{ .h_mod = null, .l_mod = 0.94, .s_mod = 0.40 },
+        .{ .h_mod = null, .l_mod = 0.99, .s_mod = 0.24 },
     });
     // Do stuff
     for (clusters) |*col| {
@@ -65,8 +65,7 @@ pub fn main() !void {
         }
         // Text color
         var col_neg: color.ColorHSL = col.negative();
-        col_neg.s = 0.1;
-        const col_neg_rgb: color.ColorRGB = col_neg.modulate(0.0, 1.0, 1.88).toRGB();
+        const col_neg_rgb: color.ColorRGB = col_neg.modulateAbsolute(&.{ .h_mod = null, .s_mod = 0.1, .l_mod = 0.99 }).toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
     }
     std.debug.print("\n", .{});

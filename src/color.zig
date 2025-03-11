@@ -1,4 +1,5 @@
 const std = @import("std");
+const modulation_curve = @import("modulation_curve.zig");
 
 pub const ColorRGB = packed struct {
     r: f32,
@@ -52,11 +53,19 @@ pub const ColorHSL = packed struct {
         return .{ .h = @mod(self.h + 180.0, 360.0), .s = 1.0 - self.s, .l = 1.0 - self.l };
     }
 
-    pub fn modulate(self: *const @This(), h_mod: f32, s_mod: f32, l_mod: f32) ColorHSL {
+    pub fn modulateRelative(self: *const @This(), mod_value: *const modulation_curve.ModulationCurve.Value) ColorHSL {
         return .{
-            .h = @mod(self.h + h_mod, 360.0),
-            .s = std.math.clamp(self.s * s_mod, 0.0, 1.0),
-            .l = std.math.clamp(self.l * l_mod, 0.0, 1.0),
+            .h = @mod(self.h + mod_value.h_mod orelse 0.0, 360.0),
+            .s = std.math.clamp(self.s * mod_value.s_mod orelse 1.0, 0.0, 1.0),
+            .l = std.math.clamp(self.l * mod_value.l_mod orelse 1.0, 0.0, 1.0),
+        };
+    }
+
+    pub fn modulateAbsolute(self: *const @This(), mod_value: *const modulation_curve.ModulationCurve.Value) ColorHSL {
+        return .{
+            .h = @mod(mod_value.h_mod orelse self.h, 360.0),
+            .s = std.math.clamp(mod_value.s_mod orelse self.s, 0.0, 1.0),
+            .l = std.math.clamp(mod_value.l_mod orelse self.l, 0.0, 1.0),
         };
     }
 

@@ -2,7 +2,7 @@ const std = @import("std");
 const color = @import("color.zig");
 
 pub const ModulationCurve = struct {
-    pub const Value = struct { h_mod: f32, s_mod: f32, l_mod: f32 };
+    pub const Value = struct { h_mod: ?f32, s_mod: ?f32, l_mod: ?f32 };
 
     curve_values: []const Value,
 
@@ -14,7 +14,7 @@ pub const ModulationCurve = struct {
         var colors: []color.ColorHSL = try allocator.alloc(color.ColorHSL, self.curve_values.len);
         // Apply curve to the input color
         for (self.curve_values, 0..) |*modulation_value, idx| {
-            colors[idx] = clr.modulate(modulation_value.h_mod, modulation_value.s_mod, modulation_value.l_mod);
+            colors[idx] = clr.modulateAbsolute(modulation_value);
         }
         return colors;
     }
