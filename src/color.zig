@@ -116,3 +116,77 @@ pub const ColorHSL = packed struct {
         };
     }
 };
+
+const expect = std.testing.expect;
+
+test "rgb to hsl" {
+    const test_rgb_colors: [10]ColorRGB = .{
+        .{ .r = 0.0, .g = 0.0, .b = 0.0 },
+        .{ .r = 1.0, .g = 1.0, .b = 1.0 },
+        .{ .r = 1.0, .g = 0.0, .b = 0.0 },
+        .{ .r = 0.0, .g = 1.0, .b = 0.0 },
+        .{ .r = 0.0, .g = 0.0, .b = 1.0 },
+        .{ .r = 1.0, .g = 1.0, .b = 0.0 },
+        .{ .r = 1.0, .g = 0.0, .b = 1.0 },
+        .{ .r = 0.0, .g = 1.0, .b = 1.0 },
+        .{ .r = 0.2, .g = 0.2, .b = 0.2 },
+        .{ .r = 0.6, .g = 0.6, .b = 0.6 },
+    };
+    const test_expected_hsl: [10]ColorHSL = .{
+        .{ .h = 0.0, .s = 0.0, .l = 0.0 },
+        .{ .h = 0.0, .s = 0.0, .l = 1.0 },
+        .{ .h = 0.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 120.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 240.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 60.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 300.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 180.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 0.0, .s = 0.0, .l = 0.2 },
+        .{ .h = 0.0, .s = 0.0, .l = 0.6 },
+    };
+    try expect(test_rgb_colors.len == test_expected_hsl.len);
+    for (test_rgb_colors, 0..) |rgb, i| {
+        std.debug.print("Current idx: {}\n", .{i});
+        const hsl = rgb.toHSL();
+        const expected_hsl = test_expected_hsl[i];
+        try expect(hsl.h == expected_hsl.h);
+        try expect(hsl.s == expected_hsl.s);
+        try expect(hsl.l == expected_hsl.l);
+    }
+}
+
+test "hsl to rgb" {
+    const test_hsl_colors: [10]ColorHSL = .{
+        .{ .h = 0.0, .s = 0.0, .l = 0.0 },
+        .{ .h = 0.0, .s = 0.0, .l = 1.0 },
+        .{ .h = 0.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 120.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 240.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 60.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 300.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 180.0, .s = 1.0, .l = 0.5 },
+        .{ .h = 0.0, .s = 0.0, .l = 0.2 },
+        .{ .h = 0.0, .s = 0.0, .l = 0.6 },
+    };
+    const test_expected_rgb: [10]ColorRGB = .{
+        .{ .r = 0.0, .g = 0.0, .b = 0.0 },
+        .{ .r = 1.0, .g = 1.0, .b = 1.0 },
+        .{ .r = 1.0, .g = 0.0, .b = 0.0 },
+        .{ .r = 0.0, .g = 1.0, .b = 0.0 },
+        .{ .r = 0.0, .g = 0.0, .b = 1.0 },
+        .{ .r = 1.0, .g = 1.0, .b = 0.0 },
+        .{ .r = 1.0, .g = 0.0, .b = 1.0 },
+        .{ .r = 0.0, .g = 1.0, .b = 1.0 },
+        .{ .r = 0.2, .g = 0.2, .b = 0.2 },
+        .{ .r = 0.6, .g = 0.6, .b = 0.6 },
+    };
+    try expect(test_hsl_colors.len == test_expected_rgb.len);
+    for (test_hsl_colors, 0..) |hsl, i| {
+        std.debug.print("Current idx: {}\n", .{i});
+        const rgb = hsl.toRGB();
+        const expected_rgb = test_expected_rgb[i];
+        try expect(rgb.r == expected_rgb.r);
+        try expect(rgb.g == expected_rgb.g);
+        try expect(rgb.b == expected_rgb.b);
+    }
+}
