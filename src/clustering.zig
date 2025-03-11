@@ -1,6 +1,5 @@
 const std = @import("std");
 const palette = @import("palette.zig");
-const image = @import("image.zig");
 const color = @import("color.zig");
 
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);

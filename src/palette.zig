@@ -1,5 +1,5 @@
 const std = @import("std");
-const image = @import("image.zig");
+const zigimg = @import("zigimg");
 const color = @import("color.zig");
 
 pub const Palette = struct {
@@ -7,17 +7,20 @@ pub const Palette = struct {
 
     values: []const Value,
 
-    pub fn init(allocator: std.mem.Allocator, img: *const image.Image) !@This() {
-        // Create list of colors
+    pub fn init(allocator: std.mem.Allocator, filepath: []const u8) !@This() {
+        // Load the image file
+        var loaded_image = try zigimg.Image.fromFilePath(allocator, filepath);
+        defer loaded_image.deinit();
+        // Initialize hashmap to count color frequencies
         var colors_hashmap: std.AutoHashMap(u96, u32) = std.AutoHashMap(u96, u32).init(allocator);
         defer colors_hashmap.deinit();
-        try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(img.colors.len)));
-        // Loop over the image colors
-        for (img.colors) |clr| {
-            // Convert rgba to bits and use it as key
-            const key: u96 = @bitCast(clr);
+        try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(loaded_image.width * loaded_image.height)));
+        // Loop over the image's pixels and count the occurrences of each color
+        var color_iterator = loaded_image.iterator();
+        while (color_iterator.next()) |*c| {
+            const clr_rgb: color.ColorRGB = color.ColorRGB{ .r = c.r, .g = c.g, .b = c.b };
+            const key: u96 = @bitCast(clr_rgb);
             const gop = try colors_hashmap.getOrPut(key);
-            // Increase weight for that color if existing
             if (gop.found_existing) {
                 gop.value_ptr.* += 1;
             } else {

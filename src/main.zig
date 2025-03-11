@@ -1,7 +1,6 @@
 const std = @import("std");
 const config = @import("config.zig");
 const color = @import("color.zig");
-const image = @import("image.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
@@ -21,19 +20,12 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, argv);
     const conf: config.Config = try config.Config.init(allocator, argv);
     defer conf.deinit(allocator);
-    // Load the image
-    std.debug.print("Loading image...\n", .{});
-    var start: i64 = std.time.milliTimestamp();
-    const img: image.Image = try image.Image.init(allocator, conf.image_path);
-    defer img.deinit(allocator);
-    var stop: i64 = std.time.milliTimestamp();
-    std.debug.print("Loading image took {}ms \n", .{stop - start});
     // Create the weighted palette from the image
     std.debug.print("Loading palette...\n", .{});
-    start = std.time.milliTimestamp();
-    const pal: palette.Palette = try palette.Palette.init(allocator, &img);
+    var start = std.time.milliTimestamp();
+    const pal: palette.Palette = try palette.Palette.init(allocator, conf.image_path);
     defer pal.deinit(allocator);
-    stop = std.time.milliTimestamp();
+    var stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
