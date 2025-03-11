@@ -42,14 +42,14 @@ pub fn main() !void {
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
     // Create the modulation curve for accent colors
     const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&.{
-        .{ .h_mod = null, .l_mod = 0.18, .s_mod = 0.99 },
-        .{ .h_mod = null, .l_mod = 0.32, .s_mod = 0.97 },
-        .{ .h_mod = null, .l_mod = 0.48, .s_mod = 0.95 },
-        .{ .h_mod = null, .l_mod = 0.55, .s_mod = 0.90 },
-        .{ .h_mod = null, .l_mod = 0.70, .s_mod = 0.80 },
-        .{ .h_mod = null, .l_mod = 0.88, .s_mod = 0.60 },
-        .{ .h_mod = null, .l_mod = 0.94, .s_mod = 0.40 },
-        .{ .h_mod = null, .l_mod = 0.99, .s_mod = 0.24 },
+        .{ .h_mod = null, .s_mod = 0.98, .l_mod = 0.09 },
+        .{ .h_mod = null, .s_mod = 0.94, .l_mod = 0.16 },
+        .{ .h_mod = null, .s_mod = 0.90, .l_mod = 0.25 },
+        .{ .h_mod = null, .s_mod = 0.82, .l_mod = 0.30 },
+        .{ .h_mod = null, .s_mod = 0.67, .l_mod = 0.42 },
+        .{ .h_mod = null, .s_mod = 0.68, .l_mod = 0.62 },
+        .{ .h_mod = null, .s_mod = 0.76, .l_mod = 0.75 },
+        .{ .h_mod = null, .s_mod = 0.92, .l_mod = 0.87 },
     });
     // Do stuff
     for (clusters) |*col| {
