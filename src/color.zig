@@ -34,19 +34,13 @@ pub const ColorHSL = packed struct {
     l: f32,
 
     // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
-    // Efficiency: Medium-High
+    // Efficiency: High
     // Percieved Color: Lower
     pub fn dstSquared(self: *const @This(), other: *const ColorHSL) f32 {
-        const h1_rad: f32 = std.math.degreesToRadians(self.h);
-        const h2_rad: f32 = std.math.degreesToRadians(other.h);
-        const x1: f32 = self.s * @cos(h1_rad);
-        const y1: f32 = self.s * @sin(h1_rad);
-        const x2: f32 = other.s * @cos(h2_rad);
-        const y2: f32 = other.s * @sin(h2_rad);
-        const dx: f32 = x1 - x2;
-        const dy: f32 = y1 - y2;
+        const dh: f32 = @abs(self.h - other.h) / 360.0;
+        const ds: f32 = self.s - other.s;
         const dl: f32 = self.l - other.l;
-        return dx * dx + dy * dy + dl * dl;
+        return dh * dh + ds * ds + dl * dl;
     }
 
     pub fn negative(self: *const @This()) ColorHSL {
