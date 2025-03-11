@@ -2,10 +2,9 @@ const std = @import("std");
 const palette = @import("palette.zig");
 const color = @import("color.zig");
 
-var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
-const random: std.Random = random_generator.random();
-
 pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.ColorHSL {
+    var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+    const random: std.Random = random_generator.random();
     // Error checking
     const k_usize: usize = @intCast(k);
     if (pal.values.len == 0) return error.EmptyPalette;
