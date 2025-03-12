@@ -3,7 +3,7 @@ const zigimg = @import("zigimg");
 const color = @import("color.zig");
 
 pub const Palette = struct {
-    pub const Value = struct { clr: color.ColorHSL, weight: u32 };
+    pub const Value = struct { clr: color.Color, weight: u32 };
 
     values: []const Value,
 
@@ -18,8 +18,12 @@ pub const Palette = struct {
         // Loop over the image's pixels and count the occurrences of each color
         var color_iterator = loaded_image.iterator();
         while (color_iterator.next()) |*c| {
-            const clr_rgb: color.ColorRGB = color.ColorRGB{ .r = c.r, .g = c.g, .b = c.b };
-            const key: u96 = @bitCast(clr_rgb);
+            // Extract f32 components and convert their bit patterns to u32
+            const r_bits = @as(u32, @bitCast(c.r));
+            const g_bits = @as(u32, @bitCast(c.g));
+            const b_bits = @as(u32, @bitCast(c.b));
+            // Pack into a u96 key (3 u32s = 12 bytes)
+            const key: u96 = (@as(u96, r_bits) << 64) | (@as(u96, g_bits) << 32) | b_bits;
             const gop = try colors_hashmap.getOrPut(key);
             if (gop.found_existing) {
                 gop.value_ptr.* += 1;
@@ -33,8 +37,15 @@ pub const Palette = struct {
         var it = colors_hashmap.iterator();
         var i: usize = 0;
         while (it.next()) |entry| : (i += 1) {
+            // Unpack the u96 key back into f32 components
+            const key: u96 = entry.key_ptr.*;
+            const r: f32 = @as(f32, @bitCast(@as(u32, @truncate(key >> 64))));
+            const g: f32 = @as(f32, @bitCast(@as(u32, @truncate((key >> 32) & 0xFFFFFFFF))));
+            const b: f32 = @as(f32, @bitCast(@as(u32, @truncate(key & 0xFFFFFFFF))));
+            // Create the color in HSL format
+            const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{
-                .clr = @as(color.ColorRGB, @bitCast(entry.key_ptr.*)).toHSL(),
+                .clr = clr_rgb.toHSL(),
                 .weight = entry.value_ptr.*,
             };
         }

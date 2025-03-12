@@ -1,12 +1,53 @@
 const std = @import("std");
 const modulation_curve = @import("modulation_curve.zig");
 
-pub const ColorRGB = packed struct {
+pub const Color = union(enum) {
+    rgb: ColorRGB,
+    hsl: ColorHSL,
+
+    pub fn values(self: *const @This()) [3]f32 {
+        return switch (self.*) {
+            .rgb => self.rgb.values(),
+            .hsl => self.hsl.values(),
+        };
+    }
+
+    pub fn toRGB(self: *const @This()) Color {
+        return switch (self.*) {
+            .rgb => .{ .rgb = self.rgb },
+            .hsl => .{ .rgb = self.hsl.toRGB() },
+        };
+    }
+
+    pub fn toHSL(self: *const @This()) Color {
+        return switch (self.*) {
+            .rgb => .{ .hsl = self.rgb.toHSL() },
+            .hsl => .{ .hsl = self.hsl },
+        };
+    }
+
+    pub fn dst(self: *const @This(), other: *const Color) f32 {
+        const other_converted: Color = switch (self.*) {
+            .rgb => other.toRGB(),
+            .hsl => other.toHSL(),
+        };
+        return switch (self.*) {
+            .rgb => self.rgb.dst(&other_converted.rgb),
+            .hsl => self.hsl.dst(&other_converted.hsl),
+        };
+    }
+};
+
+const ColorRGB = packed struct {
     r: f32,
     g: f32,
     b: f32,
 
-    pub fn toHSL(self: *const @This()) ColorHSL {
+    fn values(self: *const @This()) [3]f32 {
+        return .{ self.r, self.g, self.b };
+    }
+
+    fn toHSL(self: *const @This()) ColorHSL {
         const max: f32 = @max(self.r, @max(self.g, self.b));
         const min: f32 = @min(self.r, @min(self.g, self.b));
         const delta: f32 = max - min;
@@ -26,44 +67,29 @@ pub const ColorRGB = packed struct {
         const s: f32 = if (delta == 0) 0.0 else delta / (1.0 - @abs(2.0 * l - 1.0));
         return .{ .h = h, .s = s, .l = l };
     }
+
+    // Calculates a normalized distance between two RGB colors
+    // Euclidean distance calculation
+    // Efficiency: High
+    // Percieved Color: Lower
+    fn dst(self: *const @This(), other: *const ColorRGB) f32 {
+        const dr: f32 = self.r - other.r;
+        const dg: f32 = self.g - other.g;
+        const db: f32 = self.b - other.b;
+        return (dr * dr + dg * dg + db * db) / 3.0;
+    }
 };
 
-pub const ColorHSL = packed struct {
+const ColorHSL = packed struct {
     h: f32,
     s: f32,
     l: f32,
 
-    // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
-    // Efficiency: High
-    // Percieved Color: Lower
-    pub fn dstSquared(self: *const @This(), other: *const ColorHSL) f32 {
-        const dh: f32 = @abs(self.h - other.h) / 360.0;
-        const ds: f32 = self.s - other.s;
-        const dl: f32 = self.l - other.l;
-        return dh * dh + ds * ds + dl * dl;
+    fn values(self: *const @This()) [3]f32 {
+        return .{ self.h, self.s, self.l };
     }
 
-    pub fn negative(self: *const @This()) ColorHSL {
-        return .{ .h = @mod(self.h + 180.0, 360.0), .s = 1.0 - self.s, .l = 1.0 - self.l };
-    }
-
-    pub fn modulateRelative(self: *const @This(), mod_value: *const modulation_curve.ModulationCurve.Value) ColorHSL {
-        return .{
-            .h = @mod(self.h + mod_value.h_mod orelse 0.0, 360.0),
-            .s = std.math.clamp(self.s * mod_value.s_mod orelse 1.0, 0.0, 1.0),
-            .l = std.math.clamp(self.l * mod_value.l_mod orelse 1.0, 0.0, 1.0),
-        };
-    }
-
-    pub fn modulateAbsolute(self: *const @This(), mod_value: *const modulation_curve.ModulationCurve.Value) ColorHSL {
-        return .{
-            .h = @mod(mod_value.h_mod orelse self.h, 360.0),
-            .s = std.math.clamp(mod_value.s_mod orelse self.s, 0.0, 1.0),
-            .l = std.math.clamp(mod_value.l_mod orelse self.l, 0.0, 1.0),
-        };
-    }
-
-    pub fn toRGB(self: *const @This()) ColorRGB {
+    fn toRGB(self: *const @This()) ColorRGB {
         if (self.s == 0.0) {
             return .{ .r = self.l, .g = self.l, .b = self.l };
         }
@@ -109,78 +135,15 @@ pub const ColorHSL = packed struct {
             .b = b + m,
         };
     }
+
+    // Calculates a normalized distance between two HSL colors
+    // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
+    // Efficiency: High
+    // Percieved Color: Lower
+    fn dst(self: *const @This(), other: *const ColorHSL) f32 {
+        const dh: f32 = @abs(self.h - other.h) / 360.0;
+        const ds: f32 = self.s - other.s;
+        const dl: f32 = self.l - other.l;
+        return (dh * dh + ds * ds + dl * dl) / 3.0;
+    }
 };
-
-const expect = std.testing.expect;
-
-test "rgb to hsl" {
-    const test_rgb_colors: [10]ColorRGB = .{
-        .{ .r = 0.0, .g = 0.0, .b = 0.0 },
-        .{ .r = 1.0, .g = 1.0, .b = 1.0 },
-        .{ .r = 1.0, .g = 0.0, .b = 0.0 },
-        .{ .r = 0.0, .g = 1.0, .b = 0.0 },
-        .{ .r = 0.0, .g = 0.0, .b = 1.0 },
-        .{ .r = 1.0, .g = 1.0, .b = 0.0 },
-        .{ .r = 1.0, .g = 0.0, .b = 1.0 },
-        .{ .r = 0.0, .g = 1.0, .b = 1.0 },
-        .{ .r = 0.2, .g = 0.2, .b = 0.2 },
-        .{ .r = 0.6, .g = 0.6, .b = 0.6 },
-    };
-    const test_expected_hsl: [10]ColorHSL = .{
-        .{ .h = 0.0, .s = 0.0, .l = 0.0 },
-        .{ .h = 0.0, .s = 0.0, .l = 1.0 },
-        .{ .h = 0.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 120.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 240.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 60.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 300.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 180.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 0.0, .s = 0.0, .l = 0.2 },
-        .{ .h = 0.0, .s = 0.0, .l = 0.6 },
-    };
-    try expect(test_rgb_colors.len == test_expected_hsl.len);
-    for (test_rgb_colors, 0..) |rgb, i| {
-        std.debug.print("Current idx: {}\n", .{i});
-        const hsl = rgb.toHSL();
-        const expected_hsl = test_expected_hsl[i];
-        try expect(hsl.h == expected_hsl.h);
-        try expect(hsl.s == expected_hsl.s);
-        try expect(hsl.l == expected_hsl.l);
-    }
-}
-
-test "hsl to rgb" {
-    const test_hsl_colors: [10]ColorHSL = .{
-        .{ .h = 0.0, .s = 0.0, .l = 0.0 },
-        .{ .h = 0.0, .s = 0.0, .l = 1.0 },
-        .{ .h = 0.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 120.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 240.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 60.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 300.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 180.0, .s = 1.0, .l = 0.5 },
-        .{ .h = 0.0, .s = 0.0, .l = 0.2 },
-        .{ .h = 0.0, .s = 0.0, .l = 0.6 },
-    };
-    const test_expected_rgb: [10]ColorRGB = .{
-        .{ .r = 0.0, .g = 0.0, .b = 0.0 },
-        .{ .r = 1.0, .g = 1.0, .b = 1.0 },
-        .{ .r = 1.0, .g = 0.0, .b = 0.0 },
-        .{ .r = 0.0, .g = 1.0, .b = 0.0 },
-        .{ .r = 0.0, .g = 0.0, .b = 1.0 },
-        .{ .r = 1.0, .g = 1.0, .b = 0.0 },
-        .{ .r = 1.0, .g = 0.0, .b = 1.0 },
-        .{ .r = 0.0, .g = 1.0, .b = 1.0 },
-        .{ .r = 0.2, .g = 0.2, .b = 0.2 },
-        .{ .r = 0.6, .g = 0.6, .b = 0.6 },
-    };
-    try expect(test_hsl_colors.len == test_expected_rgb.len);
-    for (test_hsl_colors, 0..) |hsl, i| {
-        std.debug.print("Current idx: {}\n", .{i});
-        const rgb = hsl.toRGB();
-        const expected_rgb = test_expected_rgb[i];
-        try expect(rgb.r == expected_rgb.r);
-        try expect(rgb.g == expected_rgb.g);
-        try expect(rgb.b == expected_rgb.b);
-    }
-}

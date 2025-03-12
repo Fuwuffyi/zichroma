@@ -31,42 +31,42 @@ pub fn main() !void {
     var stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
     // Check if image is light or dark themed
-    const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
-    std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
+    // const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
+    // std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
-    const clusters: []color.ColorHSL = try clustering.kmeans(allocator, &pal, 4, 50);
+    const clusters: []color.Color = try clustering.kmeans(allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     stop = std.time.milliTimestamp();
     std.debug.print("Generating clusters took {}ms \n", .{stop - start});
     // Create the modulation curve for accent colors
-    const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&.{
-        .{ .h_mod = null, .s_mod = 0.98, .l_mod = 0.09 },
-        .{ .h_mod = null, .s_mod = 0.94, .l_mod = 0.16 },
-        .{ .h_mod = null, .s_mod = 0.90, .l_mod = 0.25 },
-        .{ .h_mod = null, .s_mod = 0.82, .l_mod = 0.30 },
-        .{ .h_mod = null, .s_mod = 0.67, .l_mod = 0.42 },
-        .{ .h_mod = null, .s_mod = 0.68, .l_mod = 0.62 },
-        .{ .h_mod = null, .s_mod = 0.76, .l_mod = 0.75 },
-        .{ .h_mod = null, .s_mod = 0.92, .l_mod = 0.87 },
-    });
+    // const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&.{
+    //     .{ .h_mod = null, .s_mod = 0.98, .l_mod = 0.09 },
+    //     .{ .h_mod = null, .s_mod = 0.94, .l_mod = 0.16 },
+    //     .{ .h_mod = null, .s_mod = 0.90, .l_mod = 0.25 },
+    //     .{ .h_mod = null, .s_mod = 0.82, .l_mod = 0.30 },
+    //     .{ .h_mod = null, .s_mod = 0.67, .l_mod = 0.42 },
+    //     .{ .h_mod = null, .s_mod = 0.68, .l_mod = 0.62 },
+    //     .{ .h_mod = null, .s_mod = 0.76, .l_mod = 0.75 },
+    //     .{ .h_mod = null, .s_mod = 0.92, .l_mod = 0.87 },
+    // });
     // Do stuff
     for (clusters) |*col| {
         // Primary color
-        const col_rgb: color.ColorRGB = col.toRGB();
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.b * 255)) });
+        const col_rgb: color.Color = col.toRGB();
+        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.rgb.b * 255)) });
         // Accent colors
-        const new_cols: []color.ColorHSL = try test_curve.applyCurve(allocator, col);
-        defer allocator.free(new_cols);
-        for (new_cols) |*col_acc| {
-            const col_acc_rgb: color.ColorRGB = col_acc.toRGB();
-            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.b * 255)) });
-        }
+        // const new_cols: []color.ColorHSL = try test_curve.applyCurve(allocator, col);
+        // defer allocator.free(new_cols);
+        // for (new_cols) |*col_acc| {
+        //     const col_acc_rgb: color.ColorRGB = col_acc.toRGB();
+        //     std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.b * 255)) });
+        // }
         // Text color
-        var col_neg: color.ColorHSL = col.negative();
-        const col_neg_rgb: color.ColorRGB = col_neg.modulateAbsolute(&.{ .h_mod = null, .s_mod = 0.1, .l_mod = 0.99 }).toRGB();
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
+        // var col_neg: color.ColorHSL = col.negative();
+        // const col_neg_rgb: color.ColorRGB = col_neg.modulateAbsolute(&.{ .h_mod = null, .s_mod = 0.1, .l_mod = 0.99 }).toRGB();
+        // std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
     }
     std.debug.print("\n", .{});
 }
