@@ -51,6 +51,24 @@ pub const Color = union(enum) {
         };
     }
 
+    pub inline fn negative(self: Color) Color {
+        return switch (self) {
+            .rgb => |rgb| .{ .rgb = rgb.negative() },
+            .hsl => |hsl| .{ .hsl = hsl.negative() },
+            .xyz => |xyz| .{ .xyz = xyz.negative() },
+            .lab => |lab| .{ .lab = lab.negative() },
+        };
+    }
+
+    pub inline fn getBrightness(self: Color) f32 {
+        return switch (self) {
+            .rgb => |rgb| rgb.getBrightness(),
+            .hsl => |hsl| hsl.getBrightness(),
+            .xyz => |xyz| xyz.getBrightness(),
+            .lab => |lab| lab.getBrightness(),
+        };
+    }
+
     pub inline fn dst(self: *const @This(), other: *const Color) f32 {
         const self_tag = std.meta.activeTag(self.*);
         const other_tag = std.meta.activeTag(other.*);
@@ -122,6 +140,18 @@ const ColorRGB = struct {
         const db: f32 = self.b - other.b;
         return (dr * dr + dg * dg + db * db) / 3.0;
     }
+
+    fn negative(self: ColorRGB) ColorRGB {
+        return .{
+            .r = 1.0 - self.r,
+            .g = 1.0 - self.g,
+            .b = 1.0 - self.b,
+        };
+    }
+
+    fn getBrightness(self: ColorRGB) f32 {
+        return 0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b;
+    }
 };
 
 const ColorHSL = struct {
@@ -179,6 +209,18 @@ const ColorHSL = struct {
         };
     }
 
+    fn negative(self: ColorHSL) ColorHSL {
+        return .{
+            .h = self.h,
+            .s = self.s,
+            .l = 1.0 - self.l,
+        };
+    }
+
+    fn getBrightness(self: ColorHSL) f32 {
+        return self.l;
+    }
+
     fn dst(self: *const @This(), other: *const ColorHSL) f32 {
         const h1_rad: f32 = std.math.degreesToRadians(self.h);
         const h2_rad: f32 = std.math.degreesToRadians(other.h);
@@ -228,6 +270,15 @@ const ColorXYZ = struct {
         };
     }
 
+    fn negative(self: ColorXYZ) ColorXYZ {
+        const rgb: ColorRGB = self.toRGB().negative();
+        return rgb.toXYZ();
+    }
+
+    fn getBrightness(self: ColorXYZ) f32 {
+        return self.toRGB().getBrightness();
+    }
+
     fn dst(self: *const @This(), other: *const ColorXYZ) f32 {
         const dx: f32 = self.x - other.x;
         const dy: f32 = self.y - other.y;
@@ -258,6 +309,18 @@ const ColorLAB = struct {
             .y = yr * reference_white[1],
             .z = zr * reference_white[2],
         };
+    }
+
+    fn negative(self: ColorLAB) ColorLAB {
+        return .{
+            .l = 100.0 - self.l,
+            .a = -self.a,
+            .b = -self.b,
+        };
+    }
+
+    fn getBrightness(self: ColorLAB) f32 {
+        return self.l / 100.0;
     }
 
     fn dst(self: *const @This(), other: *const ColorLAB) f32 {

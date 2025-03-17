@@ -38,9 +38,11 @@ pub const Palette = struct {
         var i: usize = 0;
         while (it.next()) |entry| : (i += 1) {
             const key = entry.key_ptr.*;
+            // Extract RGB components
             const r: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 16)))) / 255.0;
             const g: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 8)))) / 255.0;
             const b: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key)))) / 255.0;
+            // Save to lab
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{ .clr = clr_rgb.toLAB(), .weight = entry.value_ptr.* };
         }
@@ -55,8 +57,8 @@ pub const Palette = struct {
         var total: f32 = 0.0;
         var weight_sum: f32 = 0.0;
         for (self.values) |val| {
-            total += val.clr.l * @as(f32, @floatFromInt(val.weight));
-            weight_sum += @floatFromInt(val.weight);
+            total += val.clr.getBrightness() * @as(f32, @floatFromInt(val.weight));
+            weight_sum += @as(f32, @floatFromInt(val.weight));
         }
         return total / weight_sum > 0.5;
     }

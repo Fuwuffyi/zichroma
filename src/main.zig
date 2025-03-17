@@ -31,8 +31,8 @@ pub fn main() !void {
     var stop = std.time.milliTimestamp();
     std.debug.print("Loading palette took {}ms \n", .{stop - start});
     // Check if image is light or dark themed
-    // const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
-    // std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
+    const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
+    std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
     // Get clustering data
     std.debug.print("Generating clusters...\n", .{});
     start = std.time.milliTimestamp();
@@ -64,9 +64,9 @@ pub fn main() !void {
         //     std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.b * 255)) });
         // }
         // Text color
-        // var col_neg: color.ColorHSL = col.negative();
+        const col_neg_rgb: color.Color = col.negative().toRGB();
         // const col_neg_rgb: color.ColorRGB = col_neg.modulateAbsolute(&.{ .h_mod = null, .s_mod = 0.1, .l_mod = 0.99 }).toRGB();
-        // std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.b * 255)) });
+        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.b * 255)) });
     }
     std.debug.print("\n", .{});
 }
