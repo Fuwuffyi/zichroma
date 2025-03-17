@@ -24,8 +24,8 @@
     // internet connectivity.
     .dependencies = .{
         .zigimg = .{
-            .url = "git+https://github.com/zigimg/zigimg.git#efe99b6bbf5e226fbeaef124fbeb7f71c59a5959",
-            .hash = "122062addce20425797c4682a057a55578e9df23b0bb07ef62a6c7fdf0cdb05db12e",
+            .url = "git+https://github.com/zigimg/zigimg.git#b0a046be99bbe67b8a1611aff39d1dcbec89f6f9",
+            .hash = "122062f120275488adb2d5f13ccdd2ce0dcf1c3b0eb5c9e12a6eac3667a3114222cf",
         },
     },
     .paths = .{

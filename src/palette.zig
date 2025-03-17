@@ -12,18 +12,18 @@ pub const Palette = struct {
         var loaded_image = try zigimg.Image.fromFilePath(allocator, filepath);
         defer loaded_image.deinit();
         // Initialize hashmap to count color frequencies
-        var colors_hashmap: std.AutoHashMap(u96, u32) = std.AutoHashMap(u96, u32).init(allocator);
+        var colors_hashmap: std.AutoHashMap(u32, u32) = std.AutoHashMap(u32, u32).init(allocator);
         defer colors_hashmap.deinit();
         try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(loaded_image.width * loaded_image.height)));
         // Loop over the image's pixels and count the occurrences of each color
         var color_iterator = loaded_image.iterator();
         while (color_iterator.next()) |*c| {
-            // Extract f32 components and convert their bit patterns to u32
-            const r_bits = @as(u32, @bitCast(c.r));
-            const g_bits = @as(u32, @bitCast(c.g));
-            const b_bits = @as(u32, @bitCast(c.b));
-            // Pack into a u96 key (3 u32s = 12 bytes)
-            const key: u96 = (@as(u96, r_bits) << 64) | (@as(u96, g_bits) << 32) | b_bits;
+            // Extract f32 components and convert their bit patterns to u8
+            const r = @as(u8, @intFromFloat(c.r * 255.0 + 0.5));
+            const g = @as(u8, @intFromFloat(c.g * 255.0 + 0.5));
+            const b = @as(u8, @intFromFloat(c.b * 255.0 + 0.5));
+            // Pack into a u32 key (3 u8s = 3 bytes)
+            const key: u32 = (@as(u32, r) << 16) | (@as(u32, g) << 8) | b;
             const gop = try colors_hashmap.getOrPut(key);
             if (gop.found_existing) {
                 gop.value_ptr.* += 1;
@@ -37,17 +37,12 @@ pub const Palette = struct {
         var it = colors_hashmap.iterator();
         var i: usize = 0;
         while (it.next()) |entry| : (i += 1) {
-            // Unpack the u96 key back into f32 components
-            const key: u96 = entry.key_ptr.*;
-            const r: f32 = @as(f32, @bitCast(@as(u32, @truncate(key >> 64))));
-            const g: f32 = @as(f32, @bitCast(@as(u32, @truncate((key >> 32) & 0xFFFFFFFF))));
-            const b: f32 = @as(f32, @bitCast(@as(u32, @truncate(key & 0xFFFFFFFF))));
-            // Recreate the color from the stuff in LAB color space
+            const key = entry.key_ptr.*;
+            const r: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 16)))) / 255.0;
+            const g: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 8)))) / 255.0;
+            const b: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key)))) / 255.0;
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
-            values[i] = .{
-                .clr = clr_rgb.toLAB(),
-                .weight = entry.value_ptr.*,
-            };
+            values[i] = .{ .clr = clr_rgb.toLAB(), .weight = entry.value_ptr.* };
         }
         return .{ .values = values };
     }
