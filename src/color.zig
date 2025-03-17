@@ -6,7 +6,7 @@ pub const Color = union(enum) {
     xyz: ColorXYZ,
     lab: ColorLAB,
 
-    pub fn values(self: *const @This()) [3]f32 {
+    pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
             .rgb => self.rgb.values(),
             .hsl => self.hsl.values(),
@@ -15,45 +15,45 @@ pub const Color = union(enum) {
         };
     }
 
-    pub fn toRGB(self: *const @This()) Color {
+    pub inline fn toRGB(self: *const @This()) Color {
         return switch (self.*) {
             .rgb => .{ .rgb = self.rgb },
             .hsl => .{ .rgb = self.hsl.toRGB() },
             .xyz => .{ .rgb = self.xyz.toRGB() },
-            .lab => self.toXYZ().toRGB(),
+            .lab => .{ .rgb = self.lab.toXYZ().toRGB() },
         };
     }
 
-    pub fn toHSL(self: *const @This()) Color {
+    pub inline fn toHSL(self: *const @This()) Color {
         return switch (self.*) {
             .rgb => .{ .hsl = self.rgb.toHSL() },
             .hsl => .{ .hsl = self.hsl },
-            .xyz => self.toRGB().toHSL(),
-            .lab => self.toXYZ().toRGB().toHSL(),
+            .xyz => .{ .hsl = self.xyz.toRGB().toHSL() },
+            .lab => .{ .hsl = self.lab.toXYZ().toRGB().toHSL() },
         };
     }
 
-    pub fn toXYZ(self: *const @This()) Color {
+    pub inline fn toXYZ(self: *const @This()) Color {
         return switch (self.*) {
             .rgb => .{ .xyz = self.rgb.toXYZ() },
-            .hsl => self.toRGB().toXYZ(),
+            .hsl => .{ .xyz = self.hsl.toRGB().toXYZ() },
             .xyz => .{ .xyz = self.xyz },
             .lab => .{ .xyz = self.lab.toXYZ() },
         };
     }
 
-    pub fn toLAB(self: *const @This()) Color {
+    pub inline fn toLAB(self: *const @This()) Color {
         return switch (self.*) {
-            .rgb => self.toXYZ().toLAB(),
-            .hsl => self.toRGB().toXYZ().toLAB(),
+            .rgb => .{ .lab = self.rgb.toXYZ().toLAB() },
+            .hsl => .{ .lab = self.hsl.toRGB().toXYZ().toLAB() },
             .xyz => .{ .lab = self.xyz.toLAB() },
             .lab => .{ .lab = self.lab },
         };
     }
 
-    pub fn dst(self: *const @This(), other: *const Color) f32 {
-        const self_tag: std.meta.Tag(Color) = std.meta.activeTag(self.*);
-        const other_tag: std.meta.Tag(Color) = std.meta.activeTag(other.*);
+    pub inline fn dst(self: *const @This(), other: *const Color) f32 {
+        const self_tag = std.meta.activeTag(self.*);
+        const other_tag = std.meta.activeTag(other.*);
         const other_converted: Color = if (self_tag == other_tag) other.* else switch (self.*) {
             .rgb => other.toRGB(),
             .hsl => other.toHSL(),
@@ -69,7 +69,7 @@ pub const Color = union(enum) {
     }
 };
 
-const ColorRGB = packed struct {
+const ColorRGB = struct {
     r: f32,
     g: f32,
     b: f32,
@@ -124,7 +124,7 @@ const ColorRGB = packed struct {
     }
 };
 
-const ColorHSL = packed struct {
+const ColorHSL = struct {
     h: f32,
     s: f32,
     l: f32,
@@ -193,7 +193,7 @@ const ColorHSL = packed struct {
     }
 };
 
-const ColorXYZ = packed struct {
+const ColorXYZ = struct {
     x: f32,
     y: f32,
     z: f32,
@@ -236,7 +236,7 @@ const ColorXYZ = packed struct {
     }
 };
 
-const ColorLAB = packed struct {
+const ColorLAB = struct {
     l: f32,
     a: f32,
     b: f32,
