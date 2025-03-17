@@ -15,6 +15,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     for (centroids) |*centroid| {
         centroid.* = pal.values[@mod(random.int(usize), pal.values.len)].clr;
     }
+    const color_space: std.meta.Tag(color.Color) = std.meta.activeTag(centroids[0]);
     // Preallocate accumulators
     var sum_a: []f32 = try allocator.alloc(f32, k_usize);
     defer allocator.free(sum_a);
@@ -56,11 +57,39 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
         for (centroids, 0..) |*centroid, i| {
             const tw: f32 = total_weight[i];
             if (tw == 0) continue;
-            centroid.* = .{
-                .hsl = .{
-                    .h = sum_a[i] / tw,
-                    .s = sum_b[i] / tw,
-                    .l = sum_c[i] / tw,
+            const new_vals: [3]f32 = .{
+                sum_a[i] / tw,
+                sum_b[i] / tw,
+                sum_c[i] / tw,
+            };
+            centroid.* = switch (color_space) {
+                .rgb => .{
+                    .rgb = .{
+                        .r = new_vals[0],
+                        .g = new_vals[1],
+                        .b = new_vals[2],
+                    },
+                },
+                .hsl => .{
+                    .hsl = .{
+                        .h = new_vals[0],
+                        .s = new_vals[1],
+                        .l = new_vals[2],
+                    },
+                },
+                .xyz => .{
+                    .xyz = .{
+                        .x = new_vals[0],
+                        .y = new_vals[1],
+                        .z = new_vals[2],
+                    },
+                },
+                .lab => .{
+                    .lab = .{
+                        .l = new_vals[0],
+                        .a = new_vals[1],
+                        .b = new_vals[2],
+                    },
                 },
             };
         }

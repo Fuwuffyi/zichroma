@@ -52,8 +52,8 @@ pub const Color = union(enum) {
     }
 
     pub fn dst(self: *const @This(), other: *const Color) f32 {
-        const self_tag = std.meta.activeTag(self.*);
-        const other_tag = std.meta.activeTag(other.*);
+        const self_tag: std.meta.Tag(Color) = std.meta.activeTag(self.*);
+        const other_tag: std.meta.Tag(Color) = std.meta.activeTag(other.*);
         const other_converted: Color = if (self_tag == other_tag) other.* else switch (self.*) {
             .rgb => other.toRGB(),
             .hsl => other.toHSL(),
@@ -272,6 +272,7 @@ const ColorLAB = packed struct {
 const expectEqualSlices = std.testing.expectEqualSlices;
 
 test "color format conversions" {
+    // FIXME: Allow some bit of tolerance to tests, as values provided are not f32 precise lmao
     const colors_rgb: [8]Color = .{
         .{ .rgb = .{ .r = 1, .g = 0, .b = 0 } },
         .{ .rgb = .{ .r = 0, .g = 1, .b = 0 } },
