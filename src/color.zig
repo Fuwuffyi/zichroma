@@ -38,7 +38,9 @@ pub const Color = union(enum) {
     }
 
     pub fn dst(self: *const @This(), other: *const Color) f32 {
-        const other_converted: Color = switch (self.*) {
+        const other_tag = std.meta.activeTag(other.*);
+        const self_tag = std.meta.activeTag(self.*);
+        const other_converted: Color = if (self_tag == other_tag) other.* else switch (self.*) {
             .rgb => other.toRGB(),
             .hsl => other.toHSL(),
             .xyz => other.toXYZ(),
@@ -76,15 +78,15 @@ const ColorRGB = packed struct {
             h *= 60.0;
         }
         h = @mod(h, 360.0);
-        const l = (max + min) / 2.0;
+        const l: f32 = (max + min) / 2.0;
         const s: f32 = if (delta == 0) 0.0 else delta / (1.0 - @abs(2.0 * l - 1.0));
         return .{ .h = h, .s = s, .l = l };
     }
 
     fn toXYZ(self: *const @This()) ColorXYZ {
-        const val_r: f32 = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r;
-        const val_g: f32 = if (self.g > 0.04045) std.math.pow(f32, (self.g + 0.055) / 1.055, 2.4) else self.g;
-        const val_b: f32 = if (self.b > 0.04045) std.math.pow(f32, (self.b + 0.055) / 1.055, 2.4) else self.b;
+        const val_r: f32 = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r / 12.92;
+        const val_g: f32 = if (self.g > 0.04045) std.math.pow(f32, (self.g + 0.055) / 1.055, 2.4) else self.g / 12.92;
+        const val_b: f32 = if (self.b > 0.04045) std.math.pow(f32, (self.b + 0.055) / 1.055, 2.4) else self.b / 12.92;
         return .{
             .x = val_r * 0.4124 + val_g * 0.3576 + val_b * 0.1805,
             .y = val_r * 0.2126 + val_g * 0.7152 + val_b * 0.0722,
@@ -92,15 +94,11 @@ const ColorRGB = packed struct {
         };
     }
 
-    // Calculates a normalized distance between two RGB colors
-    // Euclidean distance calculation
-    // Efficiency: High
-    // Percieved Color: Lower
     fn dst(self: *const @This(), other: *const ColorRGB) f32 {
         const dr: f32 = self.r - other.r;
         const dg: f32 = self.g - other.g;
         const db: f32 = self.b - other.b;
-        return (dr * dr + dg * dg + db * db) / 3.0;
+        return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
     }
 };
 
@@ -153,23 +151,20 @@ const ColorHSL = packed struct {
             },
             else => unreachable,
         }
-        return .{
-            .r = r + m,
-            .g = g + m,
-            .b = b + m,
-        };
+        return .{ .r = r + m, .g = g + m, .b = b + m };
     }
 
-    // Calculates a normalized distance between two HSL colors
-    // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
-    // Efficiency: High
-    // Percieved Color: Lower
     fn dst(self: *const @This(), other: *const ColorHSL) f32 {
-        const dh_raw: f32 = @abs(self.h - other.h);
-        const dh: f32 = @min(dh_raw, 360 - dh_raw) / 360.0;
-        const ds: f32 = self.s - other.s;
-        const dl: f32 = self.l - other.l;
-        return (dh * dh + ds * ds + dl * dl) / 3.0;
+        const h1_rad: f32 = std.math.degreesToRadians(self.h);
+        const h2_rad: f32 = std.math.degreesToRadians(other.h);
+        const x1: f32 = self.s * @cos(h1_rad);
+        const y1: f32 = self.s * @sin(h1_rad);
+        const x2: f32 = other.s * @cos(h2_rad);
+        const y2: f32 = other.s * @sin(h2_rad);
+        const dx: f32 = x1 - x2;
+        const dy: f32 = y1 - y2;
+        const dz: f32 = self.l - other.l;
+        return (dx * dx + dy * dy + dz * dz) / 3.0;
     }
 };
 
@@ -187,16 +182,12 @@ const ColorXYZ = packed struct {
         const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
         const vb: f32 = self.x * 0.0557 + self.y * -0.2040 + self.z * 1.0570;
         return .{
-            .r = if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, (1.0 / 2.4)) - 0.055 else 12.92 * vr,
-            .g = if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, (1.0 / 2.4)) - 0.055 else 12.92 * vg,
-            .b = if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, (1.0 / 2.4)) - 0.055 else 12.92 * vb,
+            .r = if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, 1.0 / 2.4) - 0.055 else 12.92 * vr,
+            .g = if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, 1.0 / 2.4) - 0.055 else 12.92 * vg,
+            .b = if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, 1.0 / 2.4) - 0.055 else 12.92 * vb,
         };
     }
 
-    // Calculates a normalized distance between two HSL colors
-    // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
-    // Efficiency: High
-    // Percieved Color: Lower
     fn dst(self: *const @This(), other: *const ColorXYZ) f32 {
         const dx: f32 = self.x - other.x;
         const dy: f32 = self.y - other.y;
@@ -204,3 +195,83 @@ const ColorXYZ = packed struct {
         return (dx * dx + dy * dy + dz * dz) / 3.0;
     }
 };
+
+const expectEqualSlices = std.testing.expectEqualSlices;
+
+test "color format conversions" {
+    const colors_rgb: [8]Color = .{
+        .{ .rgb = .{ .r = 1, .g = 0, .b = 0 } },
+        .{ .rgb = .{ .r = 0, .g = 1, .b = 0 } },
+        .{ .rgb = .{ .r = 0, .g = 0, .b = 1 } },
+        .{ .rgb = .{ .r = 1, .g = 1, .b = 0 } },
+        .{ .rgb = .{ .r = 1, .g = 0, .b = 1 } },
+        .{ .rgb = .{ .r = 0, .g = 1, .b = 1 } },
+        .{ .rgb = .{ .r = 0, .g = 0, .b = 0 } },
+        .{ .rgb = .{ .r = 1, .g = 1, .b = 1 } },
+    };
+    const colors_hsl: [8]Color = .{
+        .{ .hsl = .{ .h = 0, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 120, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 240, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 60, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 300, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 180, .s = 1, .l = 0.5 } },
+        .{ .hsl = .{ .h = 0, .s = 0, .l = 0 } },
+        .{ .hsl = .{ .h = 0, .s = 0, .l = 1 } },
+    };
+    const colors_xyz: [8]Color = .{
+        .{ .xyz = .{ .x = 0.4124, .y = 0.2126, .z = 0.0193 } },
+        .{ .xyz = .{ .x = 0.3576, .y = 0.7152, .z = 0.1192 } },
+        .{ .xyz = .{ .x = 0.1805, .y = 0.0722, .z = 0.9505 } },
+        .{ .xyz = .{ .x = 0.77, .y = 0.9278, .z = 0.1385 } },
+        .{ .xyz = .{ .x = 0.59290004, .y = 0.2848, .z = 0.9698 } }, // ???? Seems like a round issue probably
+        .{ .xyz = .{ .x = 0.5381, .y = 0.7874, .z = 1.0697 } }, // ???? Why > 1 (> 100 should not be possible)
+        .{ .xyz = .{ .x = 0, .y = 0, .z = 0 } },
+        .{ .xyz = .{ .x = 0.9505, .y = 1, .z = 1.089 } }, // ???? Why > 1 (> 100 should not be possible)
+    };
+    //// TEST RGB -> OTHER
+    // RGB -> HSL
+    for (colors_rgb, 0..) |c_rgb, i| {
+        const color_hsl: Color = c_rgb.toHSL();
+        const a_vals: [3]f32 = color_hsl.values();
+        const b_vals: [3]f32 = colors_hsl[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+    // RGB -> XYZ
+    for (colors_rgb, 0..) |c_rgb, i| {
+        const color_xyz: Color = c_rgb.toXYZ();
+        const a_vals: [3]f32 = color_xyz.values();
+        const b_vals: [3]f32 = colors_xyz[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+    //// TEST HSL -> OTHER
+    // HSL -> RGB
+    for (colors_hsl, 0..) |c_hsl, i| {
+        const color_rgb: Color = c_hsl.toRGB();
+        const a_vals: [3]f32 = color_rgb.values();
+        const b_vals: [3]f32 = colors_rgb[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+    // HSL -> XYZ
+    for (colors_hsl, 0..) |c_hsl, i| {
+        const color_xyz: Color = c_hsl.toXYZ();
+        const a_vals: [3]f32 = color_xyz.values();
+        const b_vals: [3]f32 = colors_xyz[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+    //// TEST XYZ -> OTHER
+    // XYZ -> RGB
+    for (colors_xyz, 0..) |c_xyz, i| {
+        const color_rgb: Color = c_xyz.toRGB();
+        const a_vals: [3]f32 = color_rgb.values();
+        const b_vals: [3]f32 = colors_rgb[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+    // XYZ -> HSL
+    for (colors_xyz, 0..) |c_xyz, i| {
+        const color_hsl: Color = c_xyz.toHSL();
+        const a_vals: [3]f32 = color_hsl.values();
+        const b_vals: [3]f32 = colors_hsl[i].values();
+        try expectEqualSlices(f32, &a_vals, &b_vals);
+    }
+}

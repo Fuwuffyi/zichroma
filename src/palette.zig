@@ -45,7 +45,7 @@ pub const Palette = struct {
             // Recreate the color from the stuff in HSL
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{
-                .clr = clr_rgb,
+                .clr = clr_rgb.toHSL(),
                 .weight = entry.value_ptr.*,
             };
         }
