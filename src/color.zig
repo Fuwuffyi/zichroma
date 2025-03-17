@@ -1,14 +1,15 @@
 const std = @import("std");
-const modulation_curve = @import("modulation_curve.zig");
 
 pub const Color = union(enum) {
     rgb: ColorRGB,
     hsl: ColorHSL,
+    xyz: ColorXYZ,
 
     pub fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
             .rgb => self.rgb.values(),
             .hsl => self.hsl.values(),
+            .xyz => self.xyz.values(),
         };
     }
 
@@ -16,6 +17,7 @@ pub const Color = union(enum) {
         return switch (self.*) {
             .rgb => .{ .rgb = self.rgb },
             .hsl => .{ .rgb = self.hsl.toRGB() },
+            .xyz => .{ .rgb = self.xyz.toRGB() },
         };
     }
 
@@ -23,6 +25,15 @@ pub const Color = union(enum) {
         return switch (self.*) {
             .rgb => .{ .hsl = self.rgb.toHSL() },
             .hsl => .{ .hsl = self.hsl },
+            .xyz => self.toRGB().toHSL(),
+        };
+    }
+
+    pub fn toXYZ(self: *const @This()) Color {
+        return switch (self.*) {
+            .rgb => .{ .xyz = self.rgb.toXYZ() },
+            .hsl => self.toRGB().toXYZ(),
+            .xyz => .{ .xyz = self.xyz },
         };
     }
 
@@ -30,10 +41,12 @@ pub const Color = union(enum) {
         const other_converted: Color = switch (self.*) {
             .rgb => other.toRGB(),
             .hsl => other.toHSL(),
+            .xyz => other.toXYZ(),
         };
         return switch (self.*) {
             .rgb => self.rgb.dst(&other_converted.rgb),
             .hsl => self.hsl.dst(&other_converted.hsl),
+            .xyz => self.xyz.dst(&other_converted.xyz),
         };
     }
 };
@@ -66,6 +79,17 @@ const ColorRGB = packed struct {
         const l = (max + min) / 2.0;
         const s: f32 = if (delta == 0) 0.0 else delta / (1.0 - @abs(2.0 * l - 1.0));
         return .{ .h = h, .s = s, .l = l };
+    }
+
+    fn toXYZ(self: *const @This()) ColorXYZ {
+        const val_r: f32 = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r;
+        const val_g: f32 = if (self.g > 0.04045) std.math.pow(f32, (self.g + 0.055) / 1.055, 2.4) else self.g;
+        const val_b: f32 = if (self.b > 0.04045) std.math.pow(f32, (self.b + 0.055) / 1.055, 2.4) else self.b;
+        return .{
+            .x = val_r * 0.4124 + val_g * 0.3576 + val_b * 0.1805,
+            .y = val_r * 0.2126 + val_g * 0.7152 + val_b * 0.0722,
+            .z = val_r * 0.0193 + val_g * 0.1192 + val_b * 0.9505,
+        };
     }
 
     // Calculates a normalized distance between two RGB colors
@@ -141,9 +165,42 @@ const ColorHSL = packed struct {
     // Efficiency: High
     // Percieved Color: Lower
     fn dst(self: *const @This(), other: *const ColorHSL) f32 {
-        const dh: f32 = @abs(self.h - other.h) / 360.0;
+        const dh_raw: f32 = @abs(self.h - other.h);
+        const dh: f32 = @min(dh_raw, 360 - dh_raw) / 360.0;
         const ds: f32 = self.s - other.s;
         const dl: f32 = self.l - other.l;
         return (dh * dh + ds * ds + dl * dl) / 3.0;
+    }
+};
+
+const ColorXYZ = packed struct {
+    x: f32,
+    y: f32,
+    z: f32,
+
+    fn values(self: *const @This()) [3]f32 {
+        return .{ self.x, self.y, self.z };
+    }
+
+    fn toRGB(self: *const @This()) ColorRGB {
+        const vr: f32 = self.x * 3.2406 + self.y * -1.5372 + self.z * -0.4986;
+        const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
+        const vb: f32 = self.x * 0.0557 + self.y * -0.2040 + self.z * 1.0570;
+        return .{
+            .r = if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, (1.0 / 2.4)) - 0.055 else 12.92 * vr,
+            .g = if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, (1.0 / 2.4)) - 0.055 else 12.92 * vg,
+            .b = if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, (1.0 / 2.4)) - 0.055 else 12.92 * vb,
+        };
+    }
+
+    // Calculates a normalized distance between two HSL colors
+    // Euclidean distance calculation, converting hue and saturation to cartesian coordinates
+    // Efficiency: High
+    // Percieved Color: Lower
+    fn dst(self: *const @This(), other: *const ColorXYZ) f32 {
+        const dx: f32 = self.x - other.x;
+        const dy: f32 = self.y - other.y;
+        const dz: f32 = self.z - other.z;
+        return (dx * dx + dy * dy + dz * dz) / 3.0;
     }
 };

@@ -42,10 +42,10 @@ pub const Palette = struct {
             const r: f32 = @as(f32, @bitCast(@as(u32, @truncate(key >> 64))));
             const g: f32 = @as(f32, @bitCast(@as(u32, @truncate((key >> 32) & 0xFFFFFFFF))));
             const b: f32 = @as(f32, @bitCast(@as(u32, @truncate(key & 0xFFFFFFFF))));
-            // Create the color in HSL format
+            // Recreate the color from the stuff in HSL
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{
-                .clr = clr_rgb.toHSL(),
+                .clr = clr_rgb,
                 .weight = entry.value_ptr.*,
             };
         }
