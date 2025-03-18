@@ -1,5 +1,6 @@
 const std = @import("std");
 const config = @import("config.zig");
+const cache = @import("cache.zig");
 const color = @import("color.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
@@ -23,6 +24,10 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, argv);
     const conf: config.Config = try config.Config.init(allocator, argv);
     defer conf.deinit(allocator);
+    // Get the cache directory
+    const cache_dir: []const u8 = try cache.getCacheDir(allocator, "zig_colortheme_generator");
+    defer allocator.free(cache_dir);
+    std.debug.print("Cache directory at: {s}\n", .{cache_dir});
     // Create the weighted palette from the image
     std.debug.print("Loading palette...\n", .{});
     var start = std.time.milliTimestamp();
