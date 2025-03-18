@@ -24,17 +24,13 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, argv);
     const conf: config.Config = try config.Config.init(allocator, argv);
     defer conf.deinit(allocator);
-    // Get the cache directory
-    const cache_dir: []const u8 = try cache.getCacheDir(allocator, "zig_colortheme_generator");
-    defer allocator.free(cache_dir);
-    std.debug.print("Cache directory at: {s}\n", .{cache_dir});
-    // Create the weighted palette from the image
+    // Create the weighted palette from the image or load the cache
     std.debug.print("Loading palette...\n", .{});
-    var start = std.time.milliTimestamp();
-    const pal: palette.Palette = try palette.Palette.init(allocator, conf.image_path);
+    var start: i64 = std.time.milliTimestamp();
+    const pal: palette.Palette = try cache.readPaletteCache(allocator, conf.image_path) orelse try palette.Palette.init(allocator, conf.image_path);
     defer pal.deinit(allocator);
-    var stop = std.time.milliTimestamp();
-    std.debug.print("Loading palette took {}ms \n", .{stop - start});
+    try cache.writePaletteCache(allocator, &pal);
+    std.debug.print("Creating new palette took {}ms \n", .{std.time.milliTimestamp() - start});
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.light_mode != null) conf.light_mode.? else pal.isLight();
     std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
@@ -43,8 +39,7 @@ pub fn main() !void {
     start = std.time.milliTimestamp();
     const clusters: []color.Color = try clustering.kmeans(allocator, &pal, 4, 50);
     defer allocator.free(clusters);
-    stop = std.time.milliTimestamp();
-    std.debug.print("Generating clusters took {}ms \n", .{stop - start});
+    std.debug.print("Generating clusters took {}ms \n", .{std.time.milliTimestamp() - start});
     // Create the modulation curve for accent colors
     // const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(&.{
     //     .{ .h_mod = null, .s_mod = 0.98, .l_mod = 0.09 },

@@ -5,6 +5,7 @@ const color = @import("color.zig");
 pub const Palette = struct {
     pub const Value = struct { clr: color.Color, weight: u32 };
 
+    name: []const u8,
     values: []const Value,
 
     pub fn init(allocator: std.mem.Allocator, filepath: []const u8) !@This() {
@@ -46,7 +47,7 @@ pub const Palette = struct {
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{ .clr = clr_rgb.toLAB(), .weight = entry.value_ptr.* };
         }
-        return .{ .values = values };
+        return .{ .name = std.fs.path.basename(filepath), .values = values };
     }
 
     pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
