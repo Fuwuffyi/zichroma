@@ -2,6 +2,8 @@ const std = @import("std");
 const palette = @import("palette.zig");
 const color = @import("color.zig");
 
+const iter_threshold: comptime_float = 1e-6;
+
 pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.Color {
     var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
     const random: std.Random = random_generator.random();
@@ -54,6 +56,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
             total_weight[best_idx] += weight;
         }
         // Update centroids
+        var threshold_exit: bool = true;
         for (centroids, 0..) |*centroid, i| {
             const tw: f32 = total_weight[i];
             if (tw == 0) continue;
@@ -62,36 +65,21 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 sum_b[i] / tw,
                 sum_c[i] / tw,
             };
+            const old_col: color.Color = centroid.*;
             centroid.* = switch (color_space) {
-                .rgb => .{
-                    .rgb = .{
-                        .r = new_vals[0],
-                        .g = new_vals[1],
-                        .b = new_vals[2],
-                    },
-                },
-                .hsl => .{
-                    .hsl = .{
-                        .h = new_vals[0],
-                        .s = new_vals[1],
-                        .l = new_vals[2],
-                    },
-                },
-                .xyz => .{
-                    .xyz = .{
-                        .x = new_vals[0],
-                        .y = new_vals[1],
-                        .z = new_vals[2],
-                    },
-                },
-                .lab => .{
-                    .lab = .{
-                        .l = new_vals[0],
-                        .a = new_vals[1],
-                        .b = new_vals[2],
-                    },
-                },
+                .rgb => .{ .rgb = .{ .r = new_vals[0], .g = new_vals[1], .b = new_vals[2] } },
+                .hsl => .{ .hsl = .{ .h = new_vals[0], .s = new_vals[1], .l = new_vals[2] } },
+                .xyz => .{ .xyz = .{ .x = new_vals[0], .y = new_vals[1], .z = new_vals[2] } },
+                .lab => .{ .lab = .{ .l = new_vals[0], .a = new_vals[1], .b = new_vals[2] } },
             };
+            // Check for threshold for early exit
+            if (old_col.dst(centroid) > iter_threshold) {
+                threshold_exit = false;
+            }
+        }
+        // Early exit when threshold met
+        if (threshold_exit) {
+            break;
         }
     }
     return centroids;

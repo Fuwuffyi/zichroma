@@ -325,10 +325,10 @@ const ColorLAB = struct {
 
     fn dst(self: *const @This(), other: *const ColorLAB) f32 {
         // TODO: Implement proper LAB distance color functions
-        const dl: f32 = self.l - other.l;
-        const da: f32 = self.a - other.a;
-        const db: f32 = self.b - other.b;
-        return da * da + dl * dl + db * db;
+        const dl: f32 = (self.l - other.l) / 100.0;
+        const da: f32 = (self.a - other.a) / 256.0;
+        const db: f32 = (self.b - other.b) / 256.0;
+        return (da * da + dl * dl + db * db) / 3.0;
     }
 };
 
