@@ -6,7 +6,8 @@ const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
-// TODO: Cache the palette values to external file to not do this every program execution
+// TODO: Sort accent colors too, to make them go from light->dark and dark->light depending on color theme
+
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization
 // TODO: Add more clustering functions
@@ -68,8 +69,10 @@ pub fn main() !void {
             std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
         }
         // Text color
-        const col_neg_rgb: color.Color = col.negative().toRGB();
-        // const col_neg_rgb: color.ColorRGB = col_neg.modulateAbsolute(&.{ .h_mod = null, .s_mod = 0.1, .l_mod = 0.99 }).toRGB();
+        var col_neg_hsl: color.Color = col.negative().toHSL();
+        col_neg_hsl.hsl.s = 0.1;
+        col_neg_hsl.hsl.l = if (is_palette_light) 0.01 else 0.99;
+        const col_neg_rgb: color.Color = col_neg_hsl.toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.b * 255)) });
     }
     std.debug.print("\n", .{});
