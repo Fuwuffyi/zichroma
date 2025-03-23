@@ -6,9 +6,6 @@ const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
-// TODO: Sort clusters based on image brightness
-// TODO: Implement other curves through a config file and cmd arguments ???
-
 // TODO: Cache the palette values to external file to not do this every program execution
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization
@@ -40,6 +37,13 @@ pub fn main() !void {
     const clusters: []color.Color = try clustering.kmeans(allocator, &pal, 4, 50);
     defer allocator.free(clusters);
     std.debug.print("Generating clusters took {}ms \n", .{std.time.milliTimestamp() - start});
+    // Sort based on color theme
+    const sort_ctx = struct { light_mode: bool };
+    std.sort.block(color.Color, clusters, sort_ctx{ .light_mode = is_palette_light }, struct {
+        pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
+            return if (ctx.light_mode) a.getBrightness() < b.getBrightness() else a.getBrightness() > b.getBrightness();
+        }
+    }.lessThan);
     // Create the modulation curve for accent colors
     const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(.hsl, &.{
         .{ .a_mod = null, .b_mod = 0.98, .c_mod = 0.09 },

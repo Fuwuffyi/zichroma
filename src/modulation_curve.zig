@@ -29,9 +29,9 @@ pub const ModulationCurve = struct {
         for (self.curve_values, 0..) |mod_value, i| {
             var modulated_components: [3]f32 = components;
             // Apply modulations to each component based on the curve
-            if (mod_value.a_mod) |a| modulated_components[0] *= a;
-            if (mod_value.b_mod) |b| modulated_components[1] *= b;
-            if (mod_value.c_mod) |c| modulated_components[2] *= c;
+            if (mod_value.a_mod) |a| modulated_components[0] = a;
+            if (mod_value.b_mod) |b| modulated_components[1] = b;
+            if (mod_value.c_mod) |c| modulated_components[2] = c;
             // Reconstruct modulated color in the target space using the union’s tagged value
             colors[i] = switch (self.color_space) {
                 .rgb => color.Color{ .rgb = .{
