@@ -6,8 +6,6 @@ const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
-// TODO: Sort accent colors too, to make them go from light->dark and dark->light depending on color theme
-
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization
 // TODO: Add more clustering functions
@@ -42,7 +40,7 @@ pub fn main() !void {
     const sort_ctx = struct { light_mode: bool };
     std.sort.block(color.Color, clusters, sort_ctx{ .light_mode = is_palette_light }, struct {
         pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
-            return if (ctx.light_mode) a.getBrightness() < b.getBrightness() else a.getBrightness() > b.getBrightness();
+            return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
         }
     }.lessThan);
     // Create the modulation curve for accent colors
@@ -64,6 +62,11 @@ pub fn main() !void {
         // Accent colors
         const new_cols: []color.Color = try test_curve.applyCurve(allocator, col);
         defer allocator.free(new_cols);
+        std.sort.block(color.Color, new_cols, sort_ctx{ .light_mode = is_palette_light }, struct {
+            pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
+                return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
+            }
+        }.lessThan);
         for (new_cols) |*col_acc| {
             const col_acc_rgb: color.Color = col_acc.toRGB();
             std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
