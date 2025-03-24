@@ -57,7 +57,6 @@ pub fn writePaletteCache(allocator: std.mem.Allocator, pal: *const palette.Palet
     defer allocator.free(file_name);
     const cache_file: []const u8 = try std.fs.path.join(allocator, &[_][]const u8{ cache_dir, file_name });
     defer allocator.free(cache_file);
-    std.debug.print("File: {s}\n", .{cache_file});
     // Open the file
     const file: std.fs.File = std.fs.cwd().createFile(cache_file, .{ .exclusive = true }) catch |err| {
         if (err == error.PathAlreadyExists) return;

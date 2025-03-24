@@ -138,7 +138,7 @@ const ColorRGB = struct {
         const dr: f32 = self.r - other.r;
         const dg: f32 = self.g - other.g;
         const db: f32 = self.b - other.b;
-        return (dr * dr + dg * dg + db * db) / 3.0;
+        return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
     }
 
     fn negative(self: ColorRGB) ColorRGB {
@@ -324,11 +324,10 @@ const ColorLAB = struct {
     }
 
     fn dst(self: *const @This(), other: *const ColorLAB) f32 {
-        // TODO: Implement proper LAB distance color functions
-        const dl: f32 = (self.l - other.l) / 100.0;
-        const da: f32 = (self.a - other.a) / 256.0;
-        const db: f32 = (self.b - other.b) / 256.0;
-        return (da * da + dl * dl + db * db) / 3.0;
+        const dl: f32 = self.l - other.l;
+        const da: f32 = self.a - other.a;
+        const db: f32 = self.b - other.b;
+        return (dl * dl + da * da + db * db) * 7.08856e-6;
     }
 };
 
