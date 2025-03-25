@@ -15,6 +15,15 @@ pub const Color = union(enum) {
         };
     }
 
+    pub inline fn setValues(self: *@This(), new_values: [3]f32) void {
+        switch (self.*) {
+            .rgb => self.rgb.setValues(new_values),
+            .hsl => self.hsl.setValues(new_values),
+            .xyz => self.xyz.setValues(new_values),
+            .lab => self.lab.setValues(new_values),
+        }
+    }
+
     pub inline fn toRGB(self: *const @This()) Color {
         return switch (self.*) {
             .rgb => .{ .rgb = self.rgb },
@@ -96,6 +105,12 @@ const ColorRGB = struct {
         return .{ self.r, self.g, self.b };
     }
 
+    fn setValues(self: *@This(), new_values: [3]f32) void {
+        self.r = new_values[0];
+        self.g = new_values[1];
+        self.b = new_values[2];
+    }
+
     fn toLinear(self: *const @This()) ColorRGB {
         return .{
             .r = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r / 12.92,
@@ -161,6 +176,12 @@ const ColorHSL = struct {
 
     fn values(self: *const @This()) [3]f32 {
         return .{ self.h, self.s, self.l };
+    }
+
+    fn setValues(self: *@This(), new_values: [3]f32) void {
+        self.h = new_values[0];
+        self.s = new_values[1];
+        self.l = new_values[2];
     }
 
     fn toRGB(self: *const @This()) ColorRGB {
@@ -244,6 +265,12 @@ const ColorXYZ = struct {
         return .{ self.x, self.y, self.z };
     }
 
+    fn setValues(self: *@This(), new_values: [3]f32) void {
+        self.x = new_values[0];
+        self.y = new_values[1];
+        self.z = new_values[2];
+    }
+
     fn toRGB(self: *const @This()) ColorRGB {
         const vr: f32 = self.x * 3.2406 + self.y * -1.5372 + self.z * -0.4986;
         const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
@@ -294,6 +321,12 @@ const ColorLAB = struct {
 
     fn values(self: *const @This()) [3]f32 {
         return .{ self.l, self.a, self.b };
+    }
+
+    fn setValues(self: *@This(), new_values: [3]f32) void {
+        self.l = new_values[0];
+        self.a = new_values[1];
+        self.b = new_values[2];
     }
 
     fn toXYZ(self: *const @This()) ColorXYZ {

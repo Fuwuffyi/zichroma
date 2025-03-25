@@ -17,7 +17,6 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     for (centroids) |*centroid| {
         centroid.* = pal.values[@mod(random.int(usize), pal.values.len)].clr;
     }
-    const color_space: std.meta.Tag(color.Color) = std.meta.activeTag(centroids[0]);
     // Preallocate accumulators
     var sum_a: []f32 = try allocator.alloc(f32, k_usize);
     defer allocator.free(sum_a);
@@ -66,12 +65,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 sum_c[i] / tw,
             };
             const old_col: color.Color = centroid.*;
-            centroid.* = switch (color_space) {
-                .rgb => .{ .rgb = .{ .r = new_vals[0], .g = new_vals[1], .b = new_vals[2] } },
-                .hsl => .{ .hsl = .{ .h = new_vals[0], .s = new_vals[1], .l = new_vals[2] } },
-                .xyz => .{ .xyz = .{ .x = new_vals[0], .y = new_vals[1], .z = new_vals[2] } },
-                .lab => .{ .lab = .{ .l = new_vals[0], .a = new_vals[1], .b = new_vals[2] } },
-            };
+            centroid.setValues(new_vals);
             // Check for threshold for early exit
             if (old_col.dst(centroid) > iter_threshold) {
                 threshold_exit = false;
