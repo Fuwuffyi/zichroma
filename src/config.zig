@@ -81,47 +81,9 @@ pub const Config = struct {
                 }
                 continue;
             }
-            // Get key value pair of current line
-            const eq_pos: usize = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
-            const key: []const u8 = std.mem.trim(u8, cleaned_line[0..eq_pos], " \t");
-            const value: []const u8 = std.mem.trim(u8, cleaned_line[eq_pos + 1 ..], " \t");
-            // Set current value to current section
-            switch (current_section) {
-                .core => {
-                    if (std.mem.eql(u8, key, "cluster_count")) {
-                        config.cluster_count = try std.fmt.parseUnsigned(u32, value, 10);
-                    } else if (std.mem.eql(u8, key, "color_space")) {
-                        config.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
-                    } else if (std.mem.eql(u8, key, "profile")) {
-                        config.profile = try allocator.dupe(u8, value);
-                    } else if (std.mem.eql(u8, key, "theme")) {
-                        config.theme = std.meta.stringToEnum(Theme, value) orelse return error.InvalidTheme;
-                    } else {
-                        return error.UnknownCoreSetting;
-                    }
-                },
-                .profile => {
-                    if (std.mem.eql(u8, key, "color_space")) {
-                        config.profiles.getPtr(current_name).?.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
-                    } else if (std.mem.startsWith(u8, key, "color_")) {
-                        try config.profiles.getPtr(current_name).?.curve_values.append(try parseModulationValue(value));
-                    } else {
-                        return error.UnknownProfileSetting;
-                    }
-                },
-                .template => {
-                    if (std.mem.eql(u8, key, "template_in")) {
-                        config.templates.getPtr(current_name).?.template_in = try allocator.dupe(u8, value);
-                    } else if (std.mem.eql(u8, key, "config_out")) {
-                        config.templates.getPtr(current_name).?.config_out = try allocator.dupe(u8, value);
-                    } else if (std.mem.eql(u8, key, "post_cmd")) {
-                        config.templates.getPtr(current_name).?.post_cmd = try allocator.dupe(u8, value);
-                    } else {
-                        return error.UnknownTemplateSetting;
-                    }
-                },
-                else => return error.OrphanedKeyValue,
-            }
+            // Handle the current line property
+            const kv = try parseKeyValue(cleaned_line);
+            try handleKeyValue(allocator, &config, current_section, current_name, kv.key, kv.value);
         }
         // Temporairly print to console
         return config;
@@ -148,6 +110,62 @@ fn parseSectionHeader(line: []const u8) !struct { type: HeaderSections, name: []
         return .{ .type = .template, .name = section["template.".len..] };
     } else {
         return error.UnknownSection;
+    }
+}
+
+fn parseKeyValue(line: []const u8) !struct { key: []const u8, value: []const u8 } {
+    const eq_pos: usize = std.mem.indexOfScalar(u8, line, '=') orelse return error.InvalidKeyValue;
+    return .{
+        .key = std.mem.trim(u8, line[0..eq_pos], " \t"),
+        .value = std.mem.trim(u8, line[eq_pos + 1 ..], " \t"),
+    };
+}
+
+fn handleKeyValue(allocator: std.mem.Allocator, config: *Config, section: HeaderSections, section_name: []const u8, key: []const u8, value: []const u8) !void {
+    switch (section) {
+        .core => try handleCoreSetting(allocator, config, key, value),
+        .profile => try handleProfileSetting(config, section_name, key, value),
+        .template => try handleTemplateSetting(allocator, config, section_name, key, value),
+        else => return error.OrphanedKeyValue,
+    }
+}
+
+fn handleCoreSetting(allocator: std.mem.Allocator, config: *Config, key: []const u8, value: []const u8) !void {
+    if (std.mem.eql(u8, key, "cluster_count")) {
+        config.cluster_count = try std.fmt.parseUnsigned(u32, value, 10);
+    } else if (std.mem.eql(u8, key, "color_space")) {
+        config.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
+    } else if (std.mem.eql(u8, key, "profile")) {
+        const new_profile: []const u8 = try allocator.dupe(u8, value);
+        config.profile = new_profile;
+    } else if (std.mem.eql(u8, key, "theme")) {
+        config.theme = std.meta.stringToEnum(Theme, value) orelse return error.InvalidTheme;
+    } else {
+        return error.UnknownCoreSetting;
+    }
+}
+
+fn handleProfileSetting(config: *Config, profile_name: []const u8, key: []const u8, value: []const u8) !void {
+    const profile: *modulation_curve.ModulationCurve = config.profiles.getPtr(profile_name) orelse return error.ProfileNotFound;
+    if (std.mem.eql(u8, key, "color_space")) {
+        profile.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
+    } else if (std.mem.startsWith(u8, key, "color_")) {
+        try profile.curve_values.append(try parseModulationValue(value));
+    } else {
+        return error.UnknownProfileSetting;
+    }
+}
+
+fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template_name: []const u8, key: []const u8, value: []const u8,) !void {
+    const template: *Template = config.templates.getPtr(template_name) orelse return error.TemplateNotFound;
+    if (std.mem.eql(u8, key, "template_in")) {
+        template.template_in = try allocator.dupe(u8, value);
+    } else if (std.mem.eql(u8, key, "config_out")) {
+        template.config_out = try allocator.dupe(u8, value);
+    } else if (std.mem.eql(u8, key, "post_cmd")) {
+        template.post_cmd = try allocator.dupe(u8, value);
+    } else {
+        return error.UnknownTemplateSetting;
     }
 }
 
