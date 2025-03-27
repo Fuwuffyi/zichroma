@@ -172,18 +172,14 @@ fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template
 fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {
     const trimmed: []const u8 = std.mem.trim(u8, s, "() ");
     var parts = std.mem.splitScalar(u8, trimmed, ',');
-    var values: [3]?f32 = .{null} ** 3;
-    var i: usize = 0;
-    while (parts.next()) |part| : (i += 1) {
-        if (i >= 3) return error.TooManyModulationValues;
+    var values: [3]?f32 = .{ null, null, null };
+    for (&values) |*val| {
+        const part: []const u8 = parts.next() orelse return error.TooFewModulationValues;
         const val_str: []const u8 = std.mem.trim(u8, part, " \t");
-        if (std.mem.eql(u8, val_str, "null")) {
-            values[i] = null;
-        } else {
-            values[i] = try std.fmt.parseFloat(f32, val_str);
-        }
+        if (val_str.len == 0) continue;
+        val.* = if (std.mem.eql(u8, val_str, "null")) null else try std.fmt.parseFloat(f32, val_str);
     }
-    if (i < 3) return error.TooFewModulationValues;
+    if (parts.next() != null) return error.TooManyModulationValues;
     return .{ .a_mod = values[0], .b_mod = values[1], .c_mod = values[2] };
 }
 
