@@ -26,24 +26,28 @@ pub const Config = struct {
         var arena: std.heap.ArenaAllocator = std.heap.ArenaAllocator.init(alloc);
         errdefer arena.deinit();
         const allocator: std.mem.Allocator = arena.allocator();
+        // Create default configuration
+        var config: Config = .{
+            .cluster_count = 4,
+            .color_space = .lab,
+            .profile = try allocator.dupe(u8, "vibrant"),
+            .theme = .auto,
+            .profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator),
+            .templates = std.StringHashMap(Template).init(allocator),
+            .arena = arena,
+        };
         // Grab the configuration file
         const file: std.fs.File = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
         defer file.close();
         // Read the contents of the configuration file
         const file_contents: []const u8 = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
         defer allocator.free(file_contents);
-        // Create return var
-        var config: Config = undefined;
-        // Initialize hash maps
-        config.arena = arena;
-        config.profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator);
-        config.templates = std.StringHashMap(Template).init(allocator);
         // Section related variables
         var current_section: HeaderSections = .none;
         var current_name: []const u8 = undefined;
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
-        blk: while (lines.next()) |line| {
+        while (lines.next()) |line| {
             // Clean up lines
             const trimmed_line: []const u8 = std.mem.trim(u8, line, " \t\r");
             var split_iterator = std.mem.splitScalar(u8, trimmed_line, '#');
@@ -54,22 +58,28 @@ pub const Config = struct {
             // Check if section header
             if (cleaned_line[0] == '[') {
                 // Parse new section header
-                const end_idx: usize = std.mem.indexOfScalar(u8, cleaned_line, ']') orelse continue;
-                const section: []const u8 = std.mem.trim(u8, cleaned_line[1..end_idx], " \t");
-                if (std.mem.eql(u8, section, "core")) {
-                    current_section = .core;
-                } else if (std.mem.startsWith(u8, section, "profile.")) {
-                    current_section = .profile;
-                    current_name = section["profile.".len..];
-                    try config.profiles.put(try allocator.dupe(u8, current_name), modulation_curve.ModulationCurve.init(allocator, undefined));
-                } else if (std.mem.startsWith(u8, section, "template.")) {
-                    current_section = .template;
-                    current_name = section["template.".len..];
-                    try config.templates.put(try allocator.dupe(u8, current_name), undefined);
-                } else {
-                    return error.UnknownSection;
+                const section = try parseSectionHeader(cleaned_line);
+                current_section = section.type;
+                current_name = section.name;
+                switch (section.type) {
+                    .profile => {
+                        const name: []const u8 = try allocator.dupe(u8, current_name);
+                        try config.profiles.put(name, .{
+                            .color_space = undefined,
+                            .curve_values = std.ArrayList(modulation_curve.ModulationCurve.Value).init(allocator),
+                        });
+                    },
+                    .template => {
+                        const name: []const u8 = try allocator.dupe(u8, current_name);
+                        try config.templates.put(name, .{
+                            .template_in = "",
+                            .config_out = "",
+                            .post_cmd = null,
+                        });
+                    },
+                    else => {},
                 }
-                continue :blk;
+                continue;
             }
             // Get key value pair of current line
             const eq_pos: usize = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
@@ -118,10 +128,28 @@ pub const Config = struct {
     }
 
     pub fn deinit(self: *const @This()) void {
-        // Deinit templates
         defer self.arena.deinit();
+        // Deinitialize all color curves
+        var prof_it = self.profiles.iterator();
+        while (prof_it.next()) |*it| {
+            defer it.value_ptr.deinit();
+        }
     }
 };
+
+fn parseSectionHeader(line: []const u8) !struct { type: HeaderSections, name: []const u8 } {
+    const end_idx: usize = std.mem.indexOfScalar(u8, line, ']') orelse return error.InvalidSectionHeader;
+    const section: []const u8 = std.mem.trim(u8, line[1..end_idx], " \t");
+    if (std.mem.eql(u8, section, "core")) {
+        return .{ .type = .core, .name = undefined };
+    } else if (std.mem.startsWith(u8, section, "profile.")) {
+        return .{ .type = .profile, .name = section["profile.".len..] };
+    } else if (std.mem.startsWith(u8, section, "template.")) {
+        return .{ .type = .template, .name = section["template.".len..] };
+    } else {
+        return error.UnknownSection;
+    }
+}
 
 fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {
     const trimmed: []const u8 = std.mem.trim(u8, s, "() ");
