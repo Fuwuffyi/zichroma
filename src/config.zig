@@ -3,13 +3,9 @@ const builtin = @import("builtin");
 const color = @import("color.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
-const HeaderSections = enum {
-    none, core, profile, template
-};
+const HeaderSections = enum { none, core, profile, template };
 
-const Theme = enum {
-    auto, dark, light
-};
+const Theme = enum { auto, dark, light };
 
 const Template = struct {
     template_in: []const u8,
@@ -73,7 +69,7 @@ pub const Config = struct {
             // Get key value pair of current line
             const eq_pos = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
             const key = std.mem.trim(u8, cleaned_line[0..eq_pos], " \t");
-            const value = std.mem.trim(u8, cleaned_line[eq_pos+1..], " \t");
+            const value = std.mem.trim(u8, cleaned_line[eq_pos + 1 ..], " \t");
             // Set current value to current section
             switch (current_section) {
                 .core => {
@@ -90,20 +86,20 @@ pub const Config = struct {
                     }
                 },
                 .profile => {
-                    std.debug.print("[profile.{s}] value: {s} = {s}\n", .{current_name, key, value});
+                    std.debug.print("[profile.{s}] value: {s} = {s}\n", .{ current_name, key, value });
                 },
                 .template => {
                     if (std.mem.eql(u8, key, "template_in")) {
                         config.templates.getPtr(current_name).?.template_in = try allocator.dupe(u8, value);
                     } else if (std.mem.eql(u8, key, "config_out")) {
-                        config.templates.getPtr(current_name).?.config_out= try allocator.dupe(u8, value);
+                        config.templates.getPtr(current_name).?.config_out = try allocator.dupe(u8, value);
                     } else if (std.mem.eql(u8, key, "post_cmd")) {
-                        config.templates.getPtr(current_name).?.post_cmd= try allocator.dupe(u8, value);
+                        config.templates.getPtr(current_name).?.post_cmd = try allocator.dupe(u8, value);
                     } else {
                         return error.UnknownTemplateSetting;
                     }
                 },
-                else => return error.OrphanedKeyValue
+                else => return error.OrphanedKeyValue,
             }
         }
         // Temporairly print to console
@@ -129,10 +125,12 @@ const config_file_name: []const u8 = "config.conf";
 const config_dir_name: []const u8 = "zig_colortheme_generator";
 
 fn findConfigFile(allocator: std.mem.Allocator) !?std.fs.File {
-    const config_dir: []const u8 = try getConfigDir(allocator);
-    defer allocator.free(config_dir);
+    const config_dir: ?[]const u8 = try getConfigDir(allocator);
+    defer if (config_dir) |dir| allocator.free(dir);
     // Check config directory first
-    if (try openFileInDir(allocator, config_dir, config_file_name)) |file| return file;
+    if (config_dir) |dir| {
+        if (try openFileInDir(allocator, dir, config_file_name)) |file| return file;
+    }
     // Otherwise check exe directory
     const exe_dir: []const u8 = try std.fs.selfExeDirPathAlloc(allocator);
     defer allocator.free(exe_dir);
@@ -149,20 +147,26 @@ fn openFileInDir(allocator: std.mem.Allocator, dir_path: []const u8, filename: [
 }
 
 // TODO: Add other os specific config directories
-fn getConfigDir(allocator: std.mem.Allocator) ![]const u8 {
+fn getConfigDir(allocator: std.mem.Allocator) !?[]const u8 {
     switch (builtin.target.os.tag) {
         .linux => {
             // Check XDG_CONFIG_HOME first
             const xdg_config_dir: []const u8 = std.process.getEnvVarOwned(allocator, "XDG_CONFIG_HOME") catch |err| {
-                if (err != error.EnvironmentVariableNotFound) return err;
+                if (err != error.EnvironmentVariableNotFound) return null;
                 // Else check HOME variable
-                const home_dir: []const u8 = try std.process.getEnvVarOwned(allocator, "HOME");
+                const home_dir: []const u8 = try std.process.getEnvVarOwned(allocator, "HOME") catch return null;
                 defer allocator.free(home_dir);
-                return try std.fs.path.join(allocator, &[_][]const u8{ home_dir, ".config", config_dir_name});
+                return try std.fs.path.join(allocator, &[_][]const u8{ home_dir, ".config", config_dir_name });
             };
             defer allocator.free(xdg_config_dir);
-            return try std.fs.path.join(allocator, &[_][]const u8{ xdg_config_dir, config_dir_name});
+            return try std.fs.path.join(allocator, &[_][]const u8{ xdg_config_dir, config_dir_name });
         },
-        else => unreachable
+        .windows => {
+            return null;
+        },
+        .macos => {
+            return null;
+        },
+        else => return error.UnsupportedOS,
     }
 }
