@@ -24,9 +24,31 @@ pub const Config = struct {
         // Read the contents of the configuration file
         const file_contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
         defer allocator.free(file_contents);
+        // Create return var
+        var config: Config = undefined;
+        // Initialize hash maps
+        config.profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator);
+        config.templates = std.StringHashMap(Template).init(allocator);
+        // Loop over file lines
+        var lines = std.mem.splitScalar(u8, file_contents, '\n');
+        while (lines.next()) |line| {
+            // Clean up lines
+            const trimmed_line: []const u8 = std.mem.trim(u8, line, " \t\r");
+            var split_iterator = std.mem.splitScalar(u8, trimmed_line, '#');
+            const stripped_line = split_iterator.first();
+            const cleaned_line: []const u8 = std.mem.trim(u8, stripped_line, " \t");
+            // Skip empty lines
+            if (cleaned_line.len == 0) continue;
+            std.debug.print("{s}\n", .{cleaned_line});
+        }
         // Temporairly print to console
-        std.debug.print("{s}\n", .{file_contents});
-        return undefined;
+        return config;
+    }
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        self.profiles.deinit();
+        self.templates.deinit();
+        _ = allocator;
     }
 };
 
