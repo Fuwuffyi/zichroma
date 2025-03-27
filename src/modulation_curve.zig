@@ -34,27 +34,12 @@ pub const ModulationCurve = struct {
             if (mod_value.c_mod) |c| modulated_components[2] = c;
             // Reconstruct modulated color in the target space using the union’s tagged value
             colors[i] = switch (self.color_space) {
-                .rgb => color.Color{ .rgb = .{
-                    .r = modulated_components[0],
-                    .g = modulated_components[1],
-                    .b = modulated_components[2],
-                } },
-                .hsl => color.Color{ .hsl = .{
-                    .h = modulated_components[0],
-                    .s = modulated_components[1],
-                    .l = modulated_components[2],
-                } },
-                .xyz => color.Color{ .xyz = .{
-                    .x = modulated_components[0],
-                    .y = modulated_components[1],
-                    .z = modulated_components[2],
-                } },
-                .lab => color.Color{ .lab = .{
-                    .l = modulated_components[0],
-                    .a = modulated_components[1],
-                    .b = modulated_components[2],
-                } },
+                .rgb => color.Color{ .rgb = undefined },
+                .hsl => color.Color{ .hsl = undefined },
+                .xyz => color.Color{ .xyz = undefined },
+                .lab => color.Color{ .lab = undefined },
             };
+            colors[i].setValues(modulated_components);
         }
         return colors;
     }

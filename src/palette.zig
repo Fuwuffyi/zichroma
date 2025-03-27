@@ -47,6 +47,13 @@ pub const Palette = struct {
             const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
             values[i] = .{ .clr = clr_rgb.toLAB(), .weight = entry.value_ptr.* };
         }
+        // Sort colors by highest weight first
+        std.mem.sort(Value, values, {}, struct {
+            fn lessThan(_: void, a: Value, b: Value) bool {
+                return a.weight > b.weight;
+            }
+        }.lessThan);
+        // Return new palette
         return .{ .name = std.fs.path.basename(filepath), .values = values };
     }
 

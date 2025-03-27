@@ -123,11 +123,12 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8)
         remaining = remaining[@sizeOf(u32)..];
         values[i].weight = weight;
         values[i].clr = switch (tag) {
-            .rgb => .{ .rgb = .{ .r = clr[0], .g = clr[1], .b = clr[2] } },
-            .hsl => .{ .hsl = .{ .h = clr[0], .s = clr[1], .l = clr[2] } },
-            .xyz => .{ .xyz = .{ .x = clr[0], .y = clr[1], .z = clr[2] } },
-            .lab => .{ .lab = .{ .l = clr[0], .a = clr[1], .b = clr[2] } },
+            .rgb => .{ .rgb = undefined },
+            .hsl => .{ .hsl = undefined },
+            .xyz => .{ .xyz = undefined },
+            .lab => .{ .lab = undefined },
         };
+        values[i].clr.setValues(clr);
     }
     return .{ .name = palette_name, .values = values };
 }
