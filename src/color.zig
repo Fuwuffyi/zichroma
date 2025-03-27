@@ -1,6 +1,8 @@
 const std = @import("std");
 
-pub const Color = union(enum) {
+pub const ColorSpace = enum { rgb, hsl, xyz, lab };
+
+pub const Color = union(ColorSpace) {
     rgb: ColorRGB,
     hsl: ColorHSL,
     xyz: ColorXYZ,

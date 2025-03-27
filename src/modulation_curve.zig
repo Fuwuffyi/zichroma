@@ -2,13 +2,12 @@ const std = @import("std");
 const color = @import("color.zig");
 
 pub const ModulationCurve = struct {
-    pub const ColorSpace = enum { rgb, hsl, xyz, lab }; // Enum to identify target space
     curve_values: []const Value,
-    color_space: ColorSpace, // Stores which color space to modulate
+    color_space: color.ColorSpace, // Stores which color space to modulate
 
     pub const Value = struct { a_mod: ?f32, b_mod: ?f32, c_mod: ?f32 };
 
-    pub fn init(color_space: ColorSpace, curve_values: []const Value) ModulationCurve {
+    pub fn init(color_space: color.ColorSpace, curve_values: []const Value) ModulationCurve {
         return .{
             .color_space = color_space,
             .curve_values = curve_values,
