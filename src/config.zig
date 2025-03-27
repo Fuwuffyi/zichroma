@@ -3,17 +3,25 @@ const builtin = @import("builtin");
 const color = @import("color.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
-pub const Config = struct {
-    const Template = struct {
-        template_in: []const u8,
-        config_out: []const u8,
-        post_cmd: ?[]const u8,
-    };
+const HeaderSections = enum {
+    none, core, profile, template
+};
 
+const Theme = enum {
+    auto, dark, light
+};
+
+const Template = struct {
+    template_in: []const u8,
+    config_out: []const u8,
+    post_cmd: ?[]const u8,
+};
+
+pub const Config = struct {
     cluster_count: u32,
     color_space: color.ColorSpace,
     profile: []const u8,
-    theme: enum { auto, dark, light },
+    theme: Theme,
     profiles: std.StringHashMap(modulation_curve.ModulationCurve),
     templates: std.StringHashMap(Template),
 
@@ -29,6 +37,10 @@ pub const Config = struct {
         // Initialize hash maps
         config.profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator);
         config.templates = std.StringHashMap(Template).init(allocator);
+        // Section related variables
+        var current_section: HeaderSections = .none;
+        var current_name: []const u8 = undefined;
+        var current_data: union {template: Template, curve: modulation_curve.ModulationCurve} = undefined;
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
         blk: while (lines.next()) |line| {
@@ -45,17 +57,53 @@ pub const Config = struct {
                 const end_idx: usize = std.mem.indexOfScalar(u8, cleaned_line, ']') orelse continue;
                 const section: []const u8 = std.mem.trim(u8, cleaned_line[1..end_idx], " \t");
                 if (std.mem.eql(u8, section, "core")) {
-                    std.debug.print("Core section here!\n", .{});
+                    current_section = .core;
                 } else if (std.mem.startsWith(u8, section, "profile.")) {
-                    std.debug.print("Profile section here!\n", .{});
+                    current_section = .profile;
+                    current_name = section["profile.".len..];
+                    current_data = .{ .curve = undefined };
                 } else if (std.mem.startsWith(u8, section, "template.")) {
-                    std.debug.print("Template section here!\n", .{});
+                    current_section = .template;
+                    current_name = section["template.".len..];
+                    current_data = .{
+                        .template = .{
+                            .template_in = undefined,
+                            .config_out = undefined,
+                            .post_cmd = undefined,
+                        },
+                    };
                 } else {
                     return error.UnknownSection;
                 }
                 continue :blk;
             }
-            std.debug.print("{s}\n", .{cleaned_line});
+            // Get key value pair of current line
+            const eq_pos = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
+            const key = std.mem.trim(u8, cleaned_line[0..eq_pos], " \t");
+            const value = std.mem.trim(u8, cleaned_line[eq_pos+1..], " \t");
+            // Set current value to current section
+            switch (current_section) {
+                .core => {
+                    if (std.mem.eql(u8, key, "cluster_count")) {
+                        config.cluster_count = try std.fmt.parseUnsigned(u32, value, 10);
+                    } else if (std.mem.eql(u8, key, "color_space")) {
+                        config.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
+                    } else if (std.mem.eql(u8, key, "profile")) {
+                        config.profile = try allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "theme")) {
+                        config.theme = std.meta.stringToEnum(Theme, value) orelse return error.InvalidTheme;
+                    } else {
+                        return error.UnknownCoreSetting;
+                    }
+                },
+                .profile => {
+                    std.debug.print("[profile.{s}] value: {s} = {s}\n", .{current_name, key, value});
+                },
+                .template => {
+                    std.debug.print("[template.{s}] value: {s} = {s}\n", .{current_name, key, value});
+                },
+                else => return error.OrphanedKeyValue
+            }
         }
         // Temporairly print to console
         return config;
@@ -64,7 +112,7 @@ pub const Config = struct {
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         self.profiles.deinit();
         self.templates.deinit();
-        _ = allocator;
+        allocator.free(self.profile);
     }
 };
 

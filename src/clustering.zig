@@ -44,11 +44,6 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     defer allocator.free(total_weight);
     // Create array to store the cluster the color appartains to
     for (0..iters) |_| {
-        for (centroids) |*col| {
-            const col_rgb: color.Color = col.toRGB();
-            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.rgb.b * 255)) });
-        }
-        std.debug.print("\n", .{});
         // Reset accumulators
         @memset(sum_a, 0.0);
         @memset(sum_b, 0.0);
