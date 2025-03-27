@@ -36,8 +36,6 @@ pub const Config = struct {
         // Section related variables
         var current_section: HeaderSections = .none;
         var current_name: []const u8 = undefined;
-        var current_profile: std.ArrayList(modulation_curve.ModulationCurve.Value) = std.ArrayList(modulation_curve.ModulationCurve.Value).init(allocator);
-        defer current_profile.deinit();
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
         blk: while (lines.next()) |line| {
@@ -58,11 +56,11 @@ pub const Config = struct {
                 } else if (std.mem.startsWith(u8, section, "profile.")) {
                     current_section = .profile;
                     current_name = section["profile.".len..];
-                    try config.profiles.put(current_name, modulation_curve.ModulationCurve.init(allocator, undefined));
+                    try config.profiles.put(try allocator.dupe(u8, current_name), modulation_curve.ModulationCurve.init(allocator, undefined));
                 } else if (std.mem.startsWith(u8, section, "template.")) {
                     current_section = .template;
                     current_name = section["template.".len..];
-                    try config.templates.put(current_name, undefined);
+                    try config.templates.put(try allocator.dupe(u8, current_name), undefined);
                 } else {
                     return error.UnknownSection;
                 }
@@ -117,19 +115,21 @@ pub const Config = struct {
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         // Deinit templates
         defer self.templates.deinit();
-        var template_it = self.templates.valueIterator();
-        while (template_it.next()) |template| {
-            defer allocator.free(template.template_in);
-            defer allocator.free(template.config_out);
-            if (template.post_cmd) |cmd| {
+        var template_it = self.templates.iterator();
+        while (template_it.next()) |*template| {
+            defer allocator.free(template.key_ptr.*);
+            defer allocator.free(template.value_ptr.template_in);
+            defer allocator.free(template.value_ptr.config_out);
+            if (template.value_ptr.post_cmd) |cmd| {
                 defer allocator.free(cmd);
             }
         }
         // Deinit color curves
         defer self.profiles.deinit();
-        var profiles_it = self.profiles.valueIterator();
-        while (profiles_it.next()) |profile| {
-            defer profile.deinit();
+        var profiles_it = self.profiles.iterator();
+        while (profiles_it.next()) |*profile| {
+            defer allocator.free(profile.key_ptr.*);
+            defer profile.value_ptr.deinit();
         }
         // Deinit core profile
         defer allocator.free(self.profile);
@@ -187,7 +187,7 @@ fn getConfigDir(allocator: std.mem.Allocator) !?[]const u8 {
             const xdg_config_dir: []const u8 = std.process.getEnvVarOwned(allocator, "XDG_CONFIG_HOME") catch |err| {
                 if (err != error.EnvironmentVariableNotFound) return null;
                 // Else check HOME variable
-                const home_dir: []const u8 = try std.process.getEnvVarOwned(allocator, "HOME") catch return null;
+                const home_dir: []const u8 = std.process.getEnvVarOwned(allocator, "HOME") catch return null;
                 defer allocator.free(home_dir);
                 return try std.fs.path.join(allocator, &[_][]const u8{ home_dir, ".config", config_dir_name });
             };
