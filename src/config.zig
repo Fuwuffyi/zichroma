@@ -20,8 +20,12 @@ pub const Config = struct {
     theme: Theme,
     profiles: std.StringHashMap(modulation_curve.ModulationCurve),
     templates: std.StringHashMap(Template),
+    arena: std.heap.ArenaAllocator,
 
-    pub fn init(allocator: std.mem.Allocator) !@This() {
+    pub fn init(alloc: std.mem.Allocator) !@This() {
+        var arena: std.heap.ArenaAllocator = std.heap.ArenaAllocator.init(alloc);
+        errdefer arena.deinit();
+        const allocator: std.mem.Allocator = arena.allocator();
         // Grab the configuration file
         const file: std.fs.File = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
         defer file.close();
@@ -31,6 +35,7 @@ pub const Config = struct {
         // Create return var
         var config: Config = undefined;
         // Initialize hash maps
+        config.arena = arena;
         config.profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator);
         config.templates = std.StringHashMap(Template).init(allocator);
         // Section related variables
@@ -112,27 +117,9 @@ pub const Config = struct {
         return config;
     }
 
-    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *const @This()) void {
         // Deinit templates
-        defer self.templates.deinit();
-        var template_it = self.templates.iterator();
-        while (template_it.next()) |*template| {
-            defer allocator.free(template.key_ptr.*);
-            defer allocator.free(template.value_ptr.template_in);
-            defer allocator.free(template.value_ptr.config_out);
-            if (template.value_ptr.post_cmd) |cmd| {
-                defer allocator.free(cmd);
-            }
-        }
-        // Deinit color curves
-        defer self.profiles.deinit();
-        var profiles_it = self.profiles.iterator();
-        while (profiles_it.next()) |*profile| {
-            defer allocator.free(profile.key_ptr.*);
-            defer profile.value_ptr.deinit();
-        }
-        // Deinit core profile
-        defer allocator.free(self.profile);
+        defer self.arena.deinit();
     }
 };
 

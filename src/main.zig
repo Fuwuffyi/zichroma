@@ -17,7 +17,7 @@ pub fn main() !void {
     const allocator: std.mem.Allocator = gpa.allocator();
     // Read config file
     var conf: config.Config = try config.Config.init(allocator);
-    defer conf.deinit(allocator);
+    defer conf.deinit();
     // Read command arguments
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
