@@ -18,10 +18,13 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
         // Initialize other centroids as furthest color in palette compared to initialized centroids
         var furthest_dst: f32 = 0;
         var furthest: *const color.Color = undefined;
-        for (pal.values) |*val| {
+        colors_loop: for (pal.values) |*val| {
             var total_dst: f32 = 0;
             for (centroids[0..idx]) |*other| {
-                total_dst += other.dst(&val.clr);
+                if (std.mem.eql(f32, &other.values(), &val.clr.values())) {
+                    continue :colors_loop;
+                }
+                total_dst += other.dst(&val.clr) * @as(f32, @floatFromInt(val.weight));
             }
             if (furthest_dst < total_dst) {
                 furthest_dst = total_dst;
@@ -41,6 +44,11 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     defer allocator.free(total_weight);
     // Create array to store the cluster the color appartains to
     for (0..iters) |_| {
+        for (centroids) |*col| {
+            const col_rgb: color.Color = col.toRGB();
+            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.rgb.b * 255)) });
+        }
+        std.debug.print("\n", .{});
         // Reset accumulators
         @memset(sum_a, 0.0);
         @memset(sum_b, 0.0);
