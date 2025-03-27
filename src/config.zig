@@ -31,7 +31,7 @@ pub const Config = struct {
         config.templates = std.StringHashMap(Template).init(allocator);
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
-        while (lines.next()) |line| {
+        blk: while (lines.next()) |line| {
             // Clean up lines
             const trimmed_line: []const u8 = std.mem.trim(u8, line, " \t\r");
             var split_iterator = std.mem.splitScalar(u8, trimmed_line, '#');
@@ -39,6 +39,22 @@ pub const Config = struct {
             const cleaned_line: []const u8 = std.mem.trim(u8, stripped_line, " \t");
             // Skip empty lines
             if (cleaned_line.len == 0) continue;
+            // Check if section header
+            if (cleaned_line[0] == '[') {
+                // Parse new section header
+                const end_idx: usize = std.mem.indexOfScalar(u8, cleaned_line, ']') orelse continue;
+                const section: []const u8 = std.mem.trim(u8, cleaned_line[1..end_idx], " \t");
+                if (std.mem.eql(u8, section, "core")) {
+                    std.debug.print("Core section here!\n", .{});
+                } else if (std.mem.startsWith(u8, section, "profile.")) {
+                    std.debug.print("Profile section here!\n", .{});
+                } else if (std.mem.startsWith(u8, section, "template.")) {
+                    std.debug.print("Template section here!\n", .{});
+                } else {
+                    return error.UnknownSection;
+                }
+                continue :blk;
+            }
             std.debug.print("{s}\n", .{cleaned_line});
         }
         // Temporairly print to console
