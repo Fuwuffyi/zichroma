@@ -1,19 +1,37 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const color = @import("color.zig");
+const modulation_curve = @import("modulation_curve.zig");
+
+pub const Config = struct {
+    const Template = struct {
+        template_in: []const u8,
+        config_out: []const u8,
+        post_cmd: ?[]const u8,
+    };
+
+    cluster_count: u32,
+    color_space: color.ColorSpace,
+    profile: []const u8,
+    theme: enum { auto, dark, light },
+    profiles: std.StringHashMap(modulation_curve.ModulationCurve),
+    templates: std.StringHashMap(Template),
+
+    pub fn init(allocator: std.mem.Allocator) !@This() {
+        // Grab the configuration file
+        const file = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
+        defer file.close();
+        // Read the contents of the configuration file
+        const file_contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+        defer allocator.free(file_contents);
+        // Temporairly print to console
+        std.debug.print("{s}\n", .{file_contents});
+        return undefined;
+    }
+};
 
 const config_file_name: []const u8 = "config.conf";
 const config_dir_name: []const u8 = "zig_colortheme_generator";
-
-pub fn testing(allocator: std.mem.Allocator) !void {
-    // Grab the configuration file
-    const file = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
-    defer file.close();
-    // Read the contents of the configuration file
-    const file_contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
-    defer allocator.free(file_contents);
-    // Temporairly print to console
-    std.debug.print("{s}\n", .{file_contents});
-}
 
 fn findConfigFile(allocator: std.mem.Allocator) !?std.fs.File {
     const config_dir: []const u8 = try getConfigDir(allocator);

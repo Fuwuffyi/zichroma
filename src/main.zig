@@ -19,8 +19,8 @@ pub fn main() !void {
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
     // Read config file
-    try config.testing(allocator);
-    
+    const conf: config.Config = try config.Config.init(allocator);
+    _ = conf;
 
     // Create the weighted palette from the image or load the cache
     // std.debug.print("Loading palette...\n", .{});
