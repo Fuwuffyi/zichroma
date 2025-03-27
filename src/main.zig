@@ -39,33 +39,24 @@ pub fn main() !void {
         }
     }.lessThan);
     // Create the modulation curve for accent colors
-    // const test_curve: modulation_curve.ModulationCurve = modulation_curve.ModulationCurve.init(.hsl, &.{
-    //     .{ .a_mod = null, .b_mod = 0.98, .c_mod = 0.09 },
-    //     .{ .a_mod = null, .b_mod = 0.94, .c_mod = 0.16 },
-    //     .{ .a_mod = null, .b_mod = 0.90, .c_mod = 0.25 },
-    //     .{ .a_mod = null, .b_mod = 0.82, .c_mod = 0.30 },
-    //     .{ .a_mod = null, .b_mod = 0.67, .c_mod = 0.42 },
-    //     .{ .a_mod = null, .b_mod = 0.68, .c_mod = 0.62 },
-    //     .{ .a_mod = null, .b_mod = 0.76, .c_mod = 0.75 },
-    //     .{ .a_mod = null, .b_mod = 0.92, .c_mod = 0.87 },
-    // });
+    const color_curve: *modulation_curve.ModulationCurve = conf.profiles.getPtr(conf.profile) orelse return error.ProfileNotFound;
     // Do stuff
     for (clusters) |*col| {
         // Primary color
         const col_rgb: color.Color = col.toRGB();
         std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.rgb.b * 255)) });
         // Accent colors
-        // const new_cols: []color.Color = try test_curve.applyCurve(allocator, col);
-        // defer allocator.free(new_cols);
-        // std.sort.block(color.Color, new_cols, sort_ctx{ .light_mode = is_palette_light }, struct {
-        //     pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
-        //         return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
-        //     }
-        // }.lessThan);
-        // for (new_cols) |*col_acc| {
-        //     const col_acc_rgb: color.Color = col_acc.toRGB();
-        //     std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
-        // }
+        const new_cols: []color.Color = try color_curve.applyCurve(allocator, col);
+        defer allocator.free(new_cols);
+        std.sort.block(color.Color, new_cols, sort_ctx{ .light_mode = is_palette_light }, struct {
+            pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
+                return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
+            }
+        }.lessThan);
+        for (new_cols) |*col_acc| {
+            const col_acc_rgb: color.Color = col_acc.toRGB();
+            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
+        }
         // Text color
         var col_neg_hsl: color.Color = col.negative().toHSL();
         col_neg_hsl.hsl.s = 0.1;

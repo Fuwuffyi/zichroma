@@ -2,20 +2,21 @@ const std = @import("std");
 const color = @import("color.zig");
 
 pub const ModulationCurve = struct {
-    curve_values: []const Value,
+    curve_values: std.ArrayList(Value),
     color_space: color.ColorSpace, // Stores which color space to modulate
 
     pub const Value = struct { a_mod: ?f32, b_mod: ?f32, c_mod: ?f32 };
 
-    pub fn init(color_space: color.ColorSpace, curve_values: []const Value) ModulationCurve {
-        return .{
-            .color_space = color_space,
-            .curve_values = curve_values,
-        };
+    pub fn init(allocator: std.mem.Allocator, color_space: color.ColorSpace) @This() {
+        return .{ .curve_values = std.ArrayList(Value).init(allocator), .color_space = color_space };
+    }
+
+    pub fn deinit(self: *@This()) void {
+        self.curve_values.deinit();
     }
 
     pub fn applyCurve(self: *const @This(), allocator: std.mem.Allocator, clr: *const color.Color) ![]color.Color {
-        const colors: []color.Color = try allocator.alloc(color.Color, self.curve_values.len);
+        const colors: []color.Color = try allocator.alloc(color.Color, self.curve_values.items.len);
         // Convert input color to the target color space (e.g., RGB/HSL/XYZ/LAB)
         const converted_color = switch (self.color_space) {
             .rgb => clr.toRGB(),
@@ -25,7 +26,7 @@ pub const ModulationCurve = struct {
         };
         // Extract component values as an array (e.g., [r, g, b] for RGB)
         const components: [3]f32 = converted_color.values();
-        for (self.curve_values, 0..) |mod_value, i| {
+        for (self.curve_values.items, 0..) |mod_value, i| {
             var modulated_components: [3]f32 = components;
             // Apply modulations to each component based on the curve
             if (mod_value.a_mod) |a| modulated_components[0] = a;

@@ -23,10 +23,10 @@ pub const Config = struct {
 
     pub fn init(allocator: std.mem.Allocator) !@This() {
         // Grab the configuration file
-        const file = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
+        const file: std.fs.File = try findConfigFile(allocator) orelse return error.ConfigFileNotFound;
         defer file.close();
         // Read the contents of the configuration file
-        const file_contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+        const file_contents: []const u8 = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
         defer allocator.free(file_contents);
         // Create return var
         var config: Config = undefined;
@@ -36,13 +36,15 @@ pub const Config = struct {
         // Section related variables
         var current_section: HeaderSections = .none;
         var current_name: []const u8 = undefined;
+        var current_profile: std.ArrayList(modulation_curve.ModulationCurve.Value) = std.ArrayList(modulation_curve.ModulationCurve.Value).init(allocator);
+        defer current_profile.deinit();
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
         blk: while (lines.next()) |line| {
             // Clean up lines
             const trimmed_line: []const u8 = std.mem.trim(u8, line, " \t\r");
             var split_iterator = std.mem.splitScalar(u8, trimmed_line, '#');
-            const stripped_line = split_iterator.first();
+            const stripped_line: []const u8 = split_iterator.first();
             const cleaned_line: []const u8 = std.mem.trim(u8, stripped_line, " \t");
             // Skip empty lines
             if (cleaned_line.len == 0) continue;
@@ -56,7 +58,7 @@ pub const Config = struct {
                 } else if (std.mem.startsWith(u8, section, "profile.")) {
                     current_section = .profile;
                     current_name = section["profile.".len..];
-                    try config.profiles.put(current_name, undefined);
+                    try config.profiles.put(current_name, modulation_curve.ModulationCurve.init(allocator, undefined));
                 } else if (std.mem.startsWith(u8, section, "template.")) {
                     current_section = .template;
                     current_name = section["template.".len..];
@@ -67,9 +69,9 @@ pub const Config = struct {
                 continue :blk;
             }
             // Get key value pair of current line
-            const eq_pos = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
-            const key = std.mem.trim(u8, cleaned_line[0..eq_pos], " \t");
-            const value = std.mem.trim(u8, cleaned_line[eq_pos + 1 ..], " \t");
+            const eq_pos: usize = std.mem.indexOfScalar(u8, cleaned_line, '=') orelse continue;
+            const key: []const u8 = std.mem.trim(u8, cleaned_line[0..eq_pos], " \t");
+            const value: []const u8 = std.mem.trim(u8, cleaned_line[eq_pos + 1 ..], " \t");
             // Set current value to current section
             switch (current_section) {
                 .core => {
@@ -86,7 +88,13 @@ pub const Config = struct {
                     }
                 },
                 .profile => {
-                    std.debug.print("[profile.{s}] value: {s} = {s}\n", .{ current_name, key, value });
+                    if (std.mem.eql(u8, key, "color_space")) {
+                        config.profiles.getPtr(current_name).?.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return error.InvalidColorSpace;
+                    } else if (std.mem.startsWith(u8, key, "color_")) {
+                        try config.profiles.getPtr(current_name).?.curve_values.append(try parseModulationValue(value));
+                    } else {
+                        return error.UnknownProfileSetting;
+                    }
                 },
                 .template => {
                     if (std.mem.eql(u8, key, "template_in")) {
@@ -107,6 +115,8 @@ pub const Config = struct {
     }
 
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        // Deinit templates
+        defer self.templates.deinit();
         var template_it = self.templates.valueIterator();
         while (template_it.next()) |template| {
             defer allocator.free(template.template_in);
@@ -115,11 +125,34 @@ pub const Config = struct {
                 defer allocator.free(cmd);
             }
         }
+        // Deinit color curves
         defer self.profiles.deinit();
-        defer self.templates.deinit();
+        var profiles_it = self.profiles.valueIterator();
+        while (profiles_it.next()) |profile| {
+            defer profile.deinit();
+        }
+        // Deinit core profile
         defer allocator.free(self.profile);
     }
 };
+
+fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {
+    const trimmed: []const u8 = std.mem.trim(u8, s, "() ");
+    var parts = std.mem.splitScalar(u8, trimmed, ',');
+    var values: [3]?f32 = .{null} ** 3;
+    var i: usize = 0;
+    while (parts.next()) |part| : (i += 1) {
+        if (i >= 3) return error.TooManyModulationValues;
+        const val_str: []const u8 = std.mem.trim(u8, part, " \t");
+        if (std.mem.eql(u8, val_str, "null")) {
+            values[i] = null;
+        } else {
+            values[i] = try std.fmt.parseFloat(f32, val_str);
+        }
+    }
+    if (i < 3) return error.TooFewModulationValues;
+    return .{ .a_mod = values[0], .b_mod = values[1], .c_mod = values[2] };
+}
 
 const config_file_name: []const u8 = "config.conf";
 const config_dir_name: []const u8 = "zig_colortheme_generator";
