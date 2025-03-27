@@ -5,8 +5,6 @@ const color = @import("color.zig");
 const iter_threshold: comptime_float = 1e-6;
 
 pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.Color {
-    var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
-    const random: std.Random = random_generator.random();
     // Error checking
     const k_usize: usize = @intCast(k);
     if (pal.values.len == 0) return error.EmptyPalette;
@@ -14,8 +12,23 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     // Generate "random" centroids
     const centroids: []color.Color = try allocator.alloc(color.Color, k_usize);
     errdefer allocator.free(centroids);
-    for (centroids) |*centroid| {
-        centroid.* = pal.values[@mod(random.int(usize), pal.values.len)].clr;
+    // Initialize first centroid using frequency
+    centroids[0] = pal.values[0].clr;
+    for (centroids[1..], 1..) |*centroid, idx| {
+        // Initialize other centroids as furthest color in palette compared to initialized centroids
+        var furthest_dst: f32 = 0;
+        var furthest: *const color.Color = undefined;
+        for (pal.values) |*val| {
+            var total_dst: f32 = 0;
+            for (centroids[0..idx]) |*other| {
+                total_dst += other.dst(&val.clr);
+            }
+            if (furthest_dst < total_dst) {
+                furthest_dst = total_dst;
+                furthest = &val.clr;
+            }
+        }
+        centroid.* = furthest.*;
     }
     // Preallocate accumulators
     var sum_a: []f32 = try allocator.alloc(f32, k_usize);
