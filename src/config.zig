@@ -16,6 +16,7 @@ pub const Config = struct {
             } else if (std.mem.startsWith(u8, arg, "-theme=")) {
                 // Get the theme from cli
                 const theme_str: []const u8 = try allocator.dupe(u8, arg["-theme=".len..]);
+                defer allocator.free(theme_str);
                 // Set the appropriate value based on theme
                 if (std.mem.eql(u8, theme_str, "auto")) continue;
                 if (std.mem.eql(u8, theme_str, "dark")) {
