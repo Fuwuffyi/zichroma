@@ -40,7 +40,6 @@ pub const Config = struct {
         // Section related variables
         var current_section: HeaderSections = .none;
         var current_name: []const u8 = undefined;
-        var current_data: union {template: Template, curve: modulation_curve.ModulationCurve} = undefined;
         // Loop over file lines
         var lines = std.mem.splitScalar(u8, file_contents, '\n');
         blk: while (lines.next()) |line| {
@@ -61,17 +60,11 @@ pub const Config = struct {
                 } else if (std.mem.startsWith(u8, section, "profile.")) {
                     current_section = .profile;
                     current_name = section["profile.".len..];
-                    current_data = .{ .curve = undefined };
+                    try config.profiles.put(current_name, undefined);
                 } else if (std.mem.startsWith(u8, section, "template.")) {
                     current_section = .template;
                     current_name = section["template.".len..];
-                    current_data = .{
-                        .template = .{
-                            .template_in = undefined,
-                            .config_out = undefined,
-                            .post_cmd = undefined,
-                        },
-                    };
+                    try config.templates.put(current_name, undefined);
                 } else {
                     return error.UnknownSection;
                 }
@@ -100,7 +93,15 @@ pub const Config = struct {
                     std.debug.print("[profile.{s}] value: {s} = {s}\n", .{current_name, key, value});
                 },
                 .template => {
-                    std.debug.print("[template.{s}] value: {s} = {s}\n", .{current_name, key, value});
+                    if (std.mem.eql(u8, key, "template_in")) {
+                        config.templates.getPtr(current_name).?.template_in = try allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "config_out")) {
+                        config.templates.getPtr(current_name).?.config_out= try allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "post_cmd")) {
+                        config.templates.getPtr(current_name).?.post_cmd= try allocator.dupe(u8, value);
+                    } else {
+                        return error.UnknownTemplateSetting;
+                    }
                 },
                 else => return error.OrphanedKeyValue
             }
@@ -110,9 +111,17 @@ pub const Config = struct {
     }
 
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
-        self.profiles.deinit();
-        self.templates.deinit();
-        allocator.free(self.profile);
+        var template_it = self.templates.valueIterator();
+        while (template_it.next()) |template| {
+            defer allocator.free(template.template_in);
+            defer allocator.free(template.config_out);
+            if (template.post_cmd) |cmd| {
+                defer allocator.free(cmd);
+            }
+        }
+        defer self.profiles.deinit();
+        defer self.templates.deinit();
+        defer allocator.free(self.profile);
     }
 };
 
