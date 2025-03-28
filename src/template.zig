@@ -32,9 +32,9 @@ fn executeCommand(allocator: std.mem.Allocator, command: []const u8) !struct {st
     child.stderr_behavior = .Pipe;
     try child.spawn();
     // Read output streams
-    const stdout = try child.stdout.?.reader().readAllAlloc(allocator, 1024 * 1024);
+    const stdout = try child.stdout.?.reader().readAllAlloc(allocator, std.math.maxInt(usize));
     errdefer allocator.free(stdout);
-    const stderr = try child.stderr.?.reader().readAllAlloc(allocator, 1024 * 1024);
+    const stderr = try child.stderr.?.reader().readAllAlloc(allocator, std.math.maxInt(usize));
     errdefer allocator.free(stderr);
     const term = try child.wait();
     return .{
