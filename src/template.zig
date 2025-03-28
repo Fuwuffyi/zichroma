@@ -9,9 +9,21 @@ pub const TemplateValue = struct {
 };
 
 pub fn applyTemplate(template_path: []const u8, out_path: []const u8, colors: []const TemplateValue, command: ?[]const u8, allocator: std.mem.Allocator) !void {
-    _ = template_path;
-    _ = out_path;
     _ = colors;
+    // Grab the configuration file
+    const template_file: std.fs.File = try std.fs.openFileAbsolute(template_path, .{});
+    defer template_file.close();
+    // Read the contents of the configuration file
+    const template_contents: []u8 = try template_file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(template_contents);
+    // TODO: Replace the parameters using the colors
+
+    // Write the new data to the out file
+    const out_file: std.fs.File = std.fs.openFileAbsolute(out_path, .{}) catch |err| blk: {
+        if (err != error.FileNotFound) return err;
+        break :blk try std.fs.createFileAbsolute(out_path, .{});
+    };
+    try out_file.writeAll(template_contents);
     // Run the command after applying the template and colors
     if (command) |cmd| {
         try runCommand(allocator, cmd);

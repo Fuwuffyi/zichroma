@@ -163,6 +163,7 @@ fn handleProfileSetting(config: *Config, profile_name: []const u8, key: []const 
     }
 }
 
+// TODO: Handle ~ or env vars in file paths
 fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template_name: []const u8, key: []const u8, value: []const u8,) !void {
     const template: *Template = config.templates.getPtr(template_name) orelse return error.TemplateNotFound;
     if (std.mem.eql(u8, key, "template_in")) {
