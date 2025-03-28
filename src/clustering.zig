@@ -16,22 +16,21 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
     centroids[0] = pal.values[0].clr;
     for (centroids[1..], 1..) |*centroid, idx| {
         // Initialize other centroids as furthest color in palette compared to initialized centroids
-        var furthest_dst: f32 = 0;
-        var furthest: *const color.Color = undefined;
-        colors_loop: for (pal.values) |*val| {
-            var total_dst: f32 = 0;
+        var best_score: f32 = 0;
+        var best_color: *const color.Color = undefined;
+        for (pal.values) |*val| {
+            var min_dst: f32 = std.math.floatMax(f32);
             for (centroids[0..idx]) |*other| {
-                if (std.mem.eql(f32, &other.values(), &val.clr.values())) {
-                    continue :colors_loop;
-                }
-                total_dst += other.dst(&val.clr) * @as(f32, @floatFromInt(val.weight));
+                min_dst = @min(min_dst, other.dst(&val.clr));
             }
-            if (furthest_dst < total_dst) {
-                furthest_dst = total_dst;
-                furthest = &val.clr;
+            if (min_dst < 1e-5) continue;
+            const score = min_dst * @as(f32, @floatFromInt(val.weight));
+            if (score > best_score) {
+                best_score = score;
+                best_color = &val.clr;
             }
         }
-        centroid.* = furthest.*;
+        centroid.* = best_color.*;
     }
     // Preallocate accumulators
     var sum_a: []f32 = try allocator.alloc(f32, k_usize);
@@ -57,9 +56,8 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
             const weight: f32 = @as(f32, @floatFromInt(value.weight));
             for (centroids, 0..) |*centroid, idx| {
                 const dist_sq: f32 = value.clr.dst(centroid);
-                const weighted_dist: f32 = weight * dist_sq;
-                if (weighted_dist < min_dist) {
-                    min_dist = weighted_dist;
+                if (dist_sq < min_dist) {
+                    min_dist = dist_sq;
                     best_idx = idx;
                 }
             }
