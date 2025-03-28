@@ -62,10 +62,10 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
     for (clusters, 0..) |*col, i| {
         template_colors[i].primary_color = col.toRGB();
         template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
-        // TODO: Improve negative color gen
         var col_neg_hsl: color.Color = col.negative().toHSL();
         col_neg_hsl.hsl.s = 0.1;
-        col_neg_hsl.hsl.l = if (light_theme) 0.01 else 0.99;
+        col_neg_hsl.hsl.l *= if (light_theme) 0.16 else 1.88;
+        col_neg_hsl.hsl.l = std.math.clamp(col_neg_hsl.hsl.l, 0.0, 1.0);
         template_colors[i].text_color = col_neg_hsl.toRGB();
     }
     return template_colors;
