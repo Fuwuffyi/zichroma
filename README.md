@@ -83,7 +83,7 @@ The property tag of the color is structured as follows:
 - `<property>`: The property defines which part of the color, and which format to use when replacing the text. It can have the following types:
    - `<r|g|b>`: To get the r,g,b property in range \[0, 255\].
    - `<rh|gh|bh>`: Same thing as above, but hexadecimal \[00, FF\].
-   - `<rgb>`: Returns an rgb tuple: (r, g, b), with the values in the range \[0, 255\].
+   - `<rgb>`: Returns an rgb tuple: `r, g, b`, with the values in the range \[0, 255\].
    - `<hex>`: Returns an rgb hex string in the range of \[000000, FFFFFF\].  
 
 A few examples are as follows:
