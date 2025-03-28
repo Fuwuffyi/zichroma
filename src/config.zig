@@ -215,7 +215,6 @@ fn openFileInDir(allocator: std.mem.Allocator, dir_path: []const u8, filename: [
     };
 }
 
-// TODO: Add other os specific config directories
 fn getConfigDir(allocator: std.mem.Allocator) !?[]const u8 {
     switch (builtin.target.os.tag) {
         .linux => {
@@ -231,10 +230,14 @@ fn getConfigDir(allocator: std.mem.Allocator) !?[]const u8 {
             return try std.fs.path.join(allocator, &[_][]const u8{ xdg_config_dir, config_dir_name });
         },
         .windows => {
-            return null;
+            const appdata_dir: []const u8 = std.process.getEnvVarOwned(allocator, "APPDATA") catch return null;
+            defer allocator.free(appdata_dir);
+            return try std.fs.path.join(allocator, &[_][]const u8{ appdata_dir, config_dir_name });
         },
         .macos => {
-            return null;
+            const home_dir: []const u8 = std.process.getEnvVarOwned(allocator, "HOME") catch return null;
+            defer allocator.free(home_dir);
+            return try std.fs.path.join(allocator, &[_][]const u8{ home_dir, "Library", "Application Support", config_dir_name });
         },
         else => return error.UnsupportedOS,
     }

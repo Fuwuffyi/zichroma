@@ -9,13 +9,24 @@ The program can be simply run from the terminal, accepting the image path as arg
 ---
 
 # Configuration Guide
+Guide on how to configure the program to suit your own needs.
 
 ---
 
 ## Table of Contents
-1. [Core Configuration](#core-configuration-core)
-2. [Profile Configuration](#profile-configuration-profile)
-3. [Template Configuration](#template-configuration-template)
+1. [Config File Setup](#config-file-setup)
+2. [Core Configuration](#core-configuration-core)
+3. [Profile Configuration](#profile-configuration-profile)
+4. [Template Configuration](#template-configuration-template)
+
+---
+
+## Config file setup
+The file must be named `config.conf` and must be placed in the following directories:
+- **Linux**: `$XDG_CONFIG_HOME/zig_colortheme_generator/config.conf` or `$HOME/zig_colortheme_generator/config.conf`
+- **MacOS**: `$HOME/Library/Application Support/zig_colortheme_generator/config.conf`
+- **Windows**: `%APPDATA%/zig_colortheme_generator/config.conf`
+Alternatively, the config file can be placed in the same directory of the executable.
 
 ---
 
