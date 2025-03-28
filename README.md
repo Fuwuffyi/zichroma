@@ -13,10 +13,9 @@ The program can be simply run from the terminal, accepting the image path as arg
 ---
 
 ## Table of Contents
-1. [Core Configuration](#core-configuration)
-2. [Profile Configuration](#profile-configuration)
-3. [Template Configuration](#template-configuration)
-4. [Examples](#examples)
+1. [Core Configuration](#core-configuration-core)
+2. [Profile Configuration](#profile-configuration-profile)
+3. [Template Configuration](#template-configuration-template)
 
 ---
 
