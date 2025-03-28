@@ -1,6 +1,6 @@
 .{
     .name = "colortheme_generator",
-    .version = "0.1.0",
+    .version = "1.0.0",
     .dependencies = .{
         .zigimg = .{
             .url = "git+https://github.com/zigimg/zigimg.git#b6889a6860970321032a9acc31d94621c6ce8d29",
