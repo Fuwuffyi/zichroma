@@ -25,7 +25,8 @@ Guide on how to configure the program to suit your own needs.
 The file must be named `config.conf` and must be placed in the following directories:
 - **Linux**: `$XDG_CONFIG_HOME/zig_colortheme_generator/config.conf` or `$HOME/zig_colortheme_generator/config.conf`
 - **MacOS**: `$HOME/Library/Application Support/zig_colortheme_generator/config.conf`
-- **Windows**: `%APPDATA%/zig_colortheme_generator/config.conf`
+- **Windows**: `%APPDATA%/zig_colortheme_generator/config.conf`  
+
 Alternatively, the config file can be placed in the same directory of the executable.
 
 ---
