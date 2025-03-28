@@ -18,6 +18,7 @@ Guide on how to configure the program to suit your own needs.
 2. [Core Configuration](#core-configuration-core)
 3. [Profile Configuration](#profile-configuration-profile)
 4. [Template Configuration](#template-configuration-template)
+5. [Template file structure](#template-file-structure)
 
 ---
 
@@ -70,3 +71,23 @@ Defines input/output paths for theme templates and optional post-generation comm
 | `template_in`     | Path to the input template file (supports `~` expansion).                                    | —       | `~/Documents/template.txt`       |
 | `config_out`      | Path to write the processed output file.                                                     | —       | `~/Documents/theme_output.txt`   |
 | `post_cmd`        | Command to execute after generating the output (e.g., reload apps). Omit for no command.      | `null`  | `systemctl restart myapp`       |
+
+---
+
+## Template file structure
+The template file can contain any kinds of text as the code will only replace sections within the `template_in` contained within `{{ 'property' }}`.  
+The property tag of the color is structured as follows:
+- `color<idx>`: Is the base cluster to get the color from (`<idx>` is a number 0..`cluster_count`).
+- `pri|txt|acc`: Are used to choose which type of color to pick out of the three categories.
+- `<idx>`: Another index is needed for accent colors, are there can be any number (0..`number of colors in profile`)
+- `<property>`: The property defines which part of the color, and which format to use when replacing the text. It can have the following types:
+   - `<r|g|b>`: To get the r,g,b property in range \[0, 255\].
+   - `<rh|gh|bh>`: Same thing as above, but hexadecimal \[00, FF\].
+   - `<rgb>`: Returns an rgb tuple: (r, g, b), with the values in the range \[0, 255\].
+   - `<hex>`: Returns an rgb hex string in the range of \[000000, FFFFFF\].  
+
+A few examples are as follows:
+- `color0.txt.rgb`: will return from the first cluster's txt color a tuple like (2, 255, 0).
+- `color2.acc4.hex`: will return from the third cluster's color an hex string like (2351FF).
+- `color1.pry.r`: will only return the 'red' value from the second cluster's primary color (255 for example).
+- `color3.pry.bh`: will only return the 'blue' value from the fourth cluster's primary color in hex (FF for example).
