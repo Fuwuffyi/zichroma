@@ -87,7 +87,7 @@ pub fn writePaletteCache(allocator: std.mem.Allocator, pal: *const palette.Palet
     try file.writeAll(buffer);
 }
 
-pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8) !?palette.Palette {
+pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8, colorspace: color.ColorSpace) !?palette.Palette {
     const palette_name: []const u8 = std.fs.path.basename(img_file_path);
     // Get the combined file path (cache_dir/pal.name.bin)
     const cache_dir: []const u8 = try getCacheDir(allocator);
@@ -129,6 +129,12 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8)
             .lab => .{ .lab = undefined },
         };
         values[i].clr.setValues(clr);
+        values[i].clr = switch (colorspace) {
+            .rgb => values[i].clr.toRGB(),
+            .hsl => values[i].clr.toHSL(),
+            .xyz => values[i].clr.toXYZ(),
+            .lab => values[i].clr.toLAB(),
+        };
     }
     return .{ .name = palette_name, .values = values };
 }
