@@ -3,6 +3,9 @@ const builtin = @import("builtin");
 const color = @import("color.zig");
 const modulation_curve = @import("modulation_curve.zig");
 
+const config_file_name: []const u8 = "config.conf";
+const config_dir_name: []const u8 = "zichroma";
+
 const HeaderSections = enum { none, core, profile, template };
 
 const Theme = enum { auto, dark, light };
@@ -190,9 +193,6 @@ fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {
     if (parts.next() != null) return error.TooManyModulationValues;
     return .{ .a_mod = values[0], .b_mod = values[1], .c_mod = values[2] };
 }
-
-const config_file_name: []const u8 = "config.conf";
-const config_dir_name: []const u8 = "zig_colortheme_generator";
 
 fn findConfigFile(allocator: std.mem.Allocator) !?std.fs.File {
     const config_dir: ?[]const u8 = try getConfigDir(allocator);

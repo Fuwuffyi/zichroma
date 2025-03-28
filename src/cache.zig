@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const palette = @import("palette.zig");
 const color = @import("color.zig");
 
-const cache_dir_name: []const u8 = "zig_colortheme_generator";
+const cache_dir_name: []const u8 = "zichroma";
 
 fn getCacheDir(allocator: std.mem.Allocator) ![]const u8 {
     const cache_dir = switch (builtin.target.os.tag) {
