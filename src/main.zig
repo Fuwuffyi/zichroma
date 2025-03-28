@@ -7,8 +7,6 @@ const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
 const template = @import("template.zig");
 
-// TODO: Ensure palette and clustering use defined color space
-
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization
 // TODO: Add more clustering functions
