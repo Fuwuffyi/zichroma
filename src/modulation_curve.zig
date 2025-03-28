@@ -40,6 +40,8 @@ pub const ModulationCurve = struct {
                 .lab => color.Color{ .lab = undefined },
             };
             colors[i].setValues(modulated_components);
+            // Set to RGB after modulation
+            colors[i] = colors[i].toRGB();
         }
         return colors;
     }

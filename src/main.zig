@@ -28,9 +28,8 @@ pub fn main() !void {
     try cache.writePaletteCache(allocator, &pal);
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
-    std.debug.print("Image is in {s} theme\n", .{if (is_palette_light) "light" else "dark"});
     // Get clustering data
-    const clusters: []color.Color = try clustering.kmeans(allocator, &pal, conf.cluster_count, 50);
+    const clusters: []color.Color = try clustering.kmeans(allocator, &pal, conf.cluster_count, 200);
     defer allocator.free(clusters);
     // Sort based on color theme
     const sort_ctx = struct { light_mode: bool };
@@ -49,6 +48,8 @@ pub fn main() !void {
     defer for (template_colors) |*col| {
         allocator.free(col.accent_colors);
     };
+    // DEBUG: print generated colors
+    printGeneratedColors(template_colors);
 }
 
 fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const modulation_curve.ModulationCurve, light_theme: bool, allocator: std.mem.Allocator) ![]const template.TemplateValue {
@@ -65,4 +66,17 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
     return template_colors;
 }
 
-//std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
+fn printGeneratedColors(color_values: []const template.TemplateValue) void {
+    std.debug.print("Primary\t\tText\t\tAccents\n", .{});
+    for (color_values) |*value| {
+        const primary_color: *const color.Color = &value.primary_color;
+        const text_color: *const color.Color = &value.text_color;
+        std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(primary_color.rgb.r * 255)), @as(u32, @intFromFloat(primary_color.rgb.g * 255)), @as(u32, @intFromFloat(primary_color.rgb.b * 255)) });
+        std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(text_color.rgb.r * 255)), @as(u32, @intFromFloat(text_color.rgb.g * 255)), @as(u32, @intFromFloat(text_color.rgb.b * 255)) });
+        for (value.accent_colors) |*accent| {
+            std.debug.print("\x1B[48;2;{};{};{}m   \x1B[0m", .{ @as(u32, @intFromFloat(accent.rgb.r * 255)), @as(u32, @intFromFloat(accent.rgb.g * 255)), @as(u32, @intFromFloat(accent.rgb.b * 255)) });
+        }
+        std.debug.print("\n", .{});
+    }
+}
+
