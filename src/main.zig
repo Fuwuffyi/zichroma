@@ -42,7 +42,7 @@ pub fn main() !void {
     }.lessThan);
     // Create the modulation curve for accent colors
     const color_curve: *modulation_curve.ModulationCurve = conf.profiles.getPtr(conf.profile) orelse return error.ProfileNotFound;
-    // TODO: Invert curve if light theme
+    if (is_palette_light) std.mem.reverse(modulation_curve.ModulationCurve.Value, color_curve.curve_values.items);
     // Create template colors
     const template_colors: []const template.TemplateValue = try createColorsFromClusters(clusters, color_curve, is_palette_light, allocator);
     defer allocator.free(template_colors);
