@@ -5,6 +5,7 @@ const color = @import("color.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
+const template = @import("template.zig");
 
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
 // TODO: Improve kmeans clustering through k-means++ initialization
@@ -42,24 +43,26 @@ pub fn main() !void {
     // Create the modulation curve for accent colors
     const color_curve: *modulation_curve.ModulationCurve = conf.profiles.getPtr(conf.profile) orelse return error.ProfileNotFound;
     // TODO: Invert curve if light theme
-    // Do stuff
-    for (clusters) |*col| {
-        // Primary color
-        const col_rgb: color.Color = col.toRGB();
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_rgb.rgb.b * 255)) });
-        // Accent colors
-        const new_cols: []color.Color = try color_curve.applyCurve(allocator, col);
-        defer allocator.free(new_cols);
-        for (new_cols) |*col_acc| {
-            const col_acc_rgb: color.Color = col_acc.toRGB();
-            std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
-        }
-        // Text color
+    // Create template colors
+    const template_colors: []const template.TemplateValue = try createColorsFromClusters(clusters, color_curve, is_palette_light, allocator);
+    defer allocator.free(template_colors);
+    defer for (template_colors) |*col| {
+        allocator.free(col.accent_colors);
+    };
+}
+
+fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const modulation_curve.ModulationCurve, light_theme: bool, allocator: std.mem.Allocator) ![]const template.TemplateValue {
+    const template_colors: []template.TemplateValue = try allocator.alloc(template.TemplateValue, clusters.len);
+    for (clusters, 0..) |*col, i| {
+        template_colors[i].primary_color = col.toRGB();
+        template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
+        // TODO: Improve negative color gen
         var col_neg_hsl: color.Color = col.negative().toHSL();
         col_neg_hsl.hsl.s = 0.1;
-        col_neg_hsl.hsl.l = if (is_palette_light) 0.01 else 0.99;
-        const col_neg_rgb: color.Color = col_neg_hsl.toRGB();
-        std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m\n", .{ @as(u32, @intFromFloat(col_neg_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_neg_rgb.rgb.b * 255)) });
+        col_neg_hsl.hsl.l = if (light_theme) 0.01 else 0.99;
+        template_colors[i].text_color = col_neg_hsl.toRGB();
     }
-    std.debug.print("\n", .{});
+    return template_colors;
 }
+
+//std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
