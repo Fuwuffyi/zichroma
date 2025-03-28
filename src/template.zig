@@ -77,7 +77,7 @@ fn processPlaceholder(placeholder: []const u8, colors: []const TemplateValue, al
 fn parseColorIndex(color_spec: []const u8, max_colors: usize) !usize {
     if (!std.mem.startsWith(u8, color_spec, "color")) return error.InvalidColorSpec;
     const index_str: []const u8 = color_spec["color".len..];
-    const index: usize = std.fmt.parseInt(usize, index_str, std.math.maxInt(usize)) catch return error.InvalidColorIndex;
+    const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return error.InvalidColorIndex;
     if (index >= max_colors) return error.ColorIndexOutOfBounds;
     return index;
 }
@@ -89,7 +89,7 @@ fn extractColorValue(color_type: []const u8, template_value: *const TemplateValu
         return &template_value.text_color;
     } else if (std.mem.startsWith(u8, color_type, "acc")) {
         const index_str: []const u8 = color_type["acc".len..];
-        const index: usize = std.fmt.parseInt(usize, index_str, std.math.maxInt(usize)) catch return error.InvalidAccentIndex;
+        const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return error.InvalidAccentIndex;
         if (index >= template_value.accent_colors.len) return error.AccentIndexOutOfBounds;
         return &template_value.accent_colors[index];
     } else {
