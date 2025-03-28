@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const exe = b.addExecutable(.{
-        .name = "colortheme_generator",
+        .name = "zichroma",
         .root_module = exe_mod,
     });
     // Add zigimg

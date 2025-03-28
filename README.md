@@ -1,4 +1,4 @@
-# Zig Colortheme Generator
+# Zichroma
 A simple program written in Zig to generate colorthemes from a given image.
 
 ---
@@ -91,3 +91,8 @@ A few examples are as follows:
 - `color2.acc4.hex`: will return from the third cluster's color, using the fifth accent color, an hex string like (2351FF).
 - `color1.pry.r`: will only return the 'red' value from the second cluster's primary color (255 for example).
 - `color3.pry.bh`: will only return the 'blue' value from the fourth cluster's primary color in hex (FF for example).
+
+---
+
+#### Final note:
+*"Go forth and make the world adowable~"* 🐺💻🎨
