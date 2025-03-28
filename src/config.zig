@@ -85,7 +85,7 @@ pub const Config = struct {
         // Deinit templates
         defer self.templates.deinit();
         var template_it = self.templates.iterator();
-        while (template_it.next()) |*template| {
+        while (template_it.next()) |template| {
             defer allocator.free(template.key_ptr.*);
             defer allocator.free(template.value_ptr.template_in);
             defer allocator.free(template.value_ptr.config_out);
@@ -96,7 +96,7 @@ pub const Config = struct {
         // Deinit color curves
         defer self.profiles.deinit();
         var profiles_it = self.profiles.iterator();
-        while (profiles_it.next()) |*profile| {
+        while (profiles_it.next()) |profile| {
             defer allocator.free(profile.key_ptr.*);
             defer profile.value_ptr.deinit();
         }

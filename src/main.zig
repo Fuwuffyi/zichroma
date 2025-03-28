@@ -50,6 +50,11 @@ pub fn main() !void {
     };
     // DEBUG: print generated colors
     printGeneratedColors(template_colors);
+    // Apply the templates from the config
+    var template_iter = conf.templates.valueIterator();
+    while (template_iter.next()) |val| {
+        try template.applyTemplate(val.template_in, val.config_out, template_colors, val.post_cmd, allocator);
+    }
 }
 
 fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const modulation_curve.ModulationCurve, light_theme: bool, allocator: std.mem.Allocator) ![]const template.TemplateValue {
