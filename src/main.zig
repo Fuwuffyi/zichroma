@@ -33,6 +33,7 @@ pub fn main() !void {
     defer allocator.free(clusters);
     // Sort based on color theme
     const sort_ctx = struct { light_mode: bool };
+    // Sort clusters
     std.sort.block(color.Color, clusters, sort_ctx{ .light_mode = is_palette_light }, struct {
         pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
             return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
@@ -40,6 +41,7 @@ pub fn main() !void {
     }.lessThan);
     // Create the modulation curve for accent colors
     const color_curve: *modulation_curve.ModulationCurve = conf.profiles.getPtr(conf.profile) orelse return error.ProfileNotFound;
+    // TODO: Invert curve if light theme
     // Do stuff
     for (clusters) |*col| {
         // Primary color
@@ -48,11 +50,6 @@ pub fn main() !void {
         // Accent colors
         const new_cols: []color.Color = try color_curve.applyCurve(allocator, col);
         defer allocator.free(new_cols);
-        std.sort.block(color.Color, new_cols, sort_ctx{ .light_mode = is_palette_light }, struct {
-            pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
-                return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
-            }
-        }.lessThan);
         for (new_cols) |*col_acc| {
             const col_acc_rgb: color.Color = col_acc.toRGB();
             std.debug.print("\x1B[48;2;{};{};{}m     \x1B[0m", .{ @as(u32, @intFromFloat(col_acc_rgb.rgb.r * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.g * 255)), @as(u32, @intFromFloat(col_acc_rgb.rgb.b * 255)) });
