@@ -2,15 +2,11 @@ const std = @import("std");
 const builtin = @import("builtin");
 const color = @import("color.zig");
 
-pub const TemplateValue = struct {
-    primary_color: color.Color,
-    text_color: color.Color,
-    accent_colors: []const color.Color
-};
+pub const TemplateValue = struct { primary_color: color.Color, text_color: color.Color, accent_colors: []const color.Color };
 
 pub fn applyTemplate(template_path: []const u8, out_path: []const u8, colors: []const TemplateValue, command: ?[]const u8, allocator: std.mem.Allocator) !void {
     // Grab the configuration file
-    const template_file: std.fs.File = try std.fs.openFileAbsolute(template_path, .{});
+    const template_file: std.fs.File = try std.fs.cwd().openFile(template_path, .{});
     defer template_file.close();
     // Read the contents of the configuration file
     const template_contents: []const u8 = try template_file.readToEndAlloc(allocator, std.math.maxInt(usize));
@@ -47,8 +43,8 @@ pub fn applyTemplate(template_path: []const u8, out_path: []const u8, colors: []
 }
 
 fn openOrCreateFile(path: []const u8) !std.fs.File {
-    const existing_file: std.fs.File = std.fs.openFileAbsolute(path, .{ .mode = .read_write }) catch |err| switch (err) {
-        error.FileNotFound => return try std.fs.createFileAbsolute(path, .{}),
+    const existing_file: std.fs.File = std.fs.cwd().openFile(path, .{ .mode = .read_write }) catch |err| switch (err) {
+        error.FileNotFound => return try std.fs.cwd().createFile(path, .{}),
         else => return err,
     };
     return existing_file;
@@ -99,7 +95,7 @@ fn extractColorValue(color_type: []const u8, template_value: *const TemplateValu
 
 fn formatColorProperty(color_value: *const color.Color, property: []const u8, allocator: std.mem.Allocator) ![]const u8 {
     const values: [3]f32 = color_value.values();
-    const value_bytes: [3]u8 = .{ 
+    const value_bytes: [3]u8 = .{
         @as(u8, @intFromFloat(values[0] * 255)),
         @as(u8, @intFromFloat(values[1] * 255)),
         @as(u8, @intFromFloat(values[2] * 255)),
@@ -117,19 +113,20 @@ fn formatColorProperty(color_value: *const color.Color, property: []const u8, al
     } else if (std.mem.eql(u8, property, "bh")) {
         return try std.fmt.allocPrint(allocator, "{x:0>2}", .{value_bytes[2]});
     } else if (std.mem.eql(u8, property, "rgb")) {
-        return try std.fmt.allocPrint(allocator, "{d}, {d}, {d}", .{value_bytes[0], value_bytes[1], value_bytes[2]});
+        return try std.fmt.allocPrint(allocator, "{d}, {d}, {d}", .{ value_bytes[0], value_bytes[1], value_bytes[2] });
     } else if (std.mem.eql(u8, property, "hex")) {
-        return try std.fmt.allocPrint(allocator, "{x:0>2}{x:0>2}{x:0>2}", .{value_bytes[0], value_bytes[1], value_bytes[2]});
+        return try std.fmt.allocPrint(allocator, "{x:0>2}{x:0>2}{x:0>2}", .{ value_bytes[0], value_bytes[1], value_bytes[2] });
     } else {
         return error.InvalidColorProperty;
     }
 }
 
-fn executeCommand(allocator: std.mem.Allocator, command: []const u8) !struct {stdout: []u8, stderr: []u8, term: std.process.Child.Term} {
+fn executeCommand(allocator: std.mem.Allocator, command: []const u8) !struct { stdout: []u8, stderr: []u8, term: std.process.Child.Term } {
     // Handle shell execution for string commands
     const shell_cmd: []const []const u8 = if (builtin.target.os.tag == .windows)
-            &[_][]const u8{"cmd.exe", "/C", command} else
-            &[_][]const u8{"/bin/sh", "-c", command};
+        &[_][]const u8{ "cmd.exe", "/C", command }
+    else
+        &[_][]const u8{ "/bin/sh", "-c", command };
     const argv: []const []const u8 = shell_cmd;
     var child: std.process.Child = std.process.Child.init(argv, allocator);
     // Capture output
