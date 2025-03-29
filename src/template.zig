@@ -158,7 +158,7 @@ fn runCommand(allocator: std.mem.Allocator, command: []const u8) !void {
     }
     switch (result.term) {
         .Exited => |code| if (code != 0) {
-            return error.CommandFailed;
+            std.debug.print("The command {s} has exited with code {}\n", .{ command, code });
         },
         else => return error.CommandFailed,
     }
