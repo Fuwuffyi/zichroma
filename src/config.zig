@@ -166,18 +166,62 @@ fn handleProfileSetting(config: *Config, profile_name: []const u8, key: []const 
     }
 }
 
-// TODO: Handle env vars and abbreviations (like ~) in file paths
 fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template_name: []const u8, key: []const u8, value: []const u8,) !void {
     const template: *Template = config.templates.getPtr(template_name) orelse return error.TemplateNotFound;
     if (std.mem.eql(u8, key, "template_in")) {
-        template.template_in = try allocator.dupe(u8, value);
+        template.template_in = try expandPath(allocator, value);
     } else if (std.mem.eql(u8, key, "config_out")) {
-        template.config_out = try allocator.dupe(u8, value);
+        template.config_out = try expandPath(allocator, value);
     } else if (std.mem.eql(u8, key, "post_cmd")) {
         template.post_cmd = try allocator.dupe(u8, value);
     } else {
         return error.UnknownTemplateSetting;
     }
+}
+
+fn expandTilde(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    if (std.mem.startsWith(u8, path, "~/")) {
+        const home: []const u8 = std.process.getEnvVarOwned(allocator, "HOME") catch "";
+        defer allocator.free(home);
+        return std.fs.path.join(allocator, &[_][]const u8{ home, path[2..] });
+    }
+    return allocator.dupe(u8, path);
+}
+
+fn expandEnvVars(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    var result: std.ArrayList(u8) = std.ArrayList(u8).init(allocator);
+    defer result.deinit();
+    var i: usize = 0;
+    while (i < path.len) {
+        if (path[i] == '$' and (i + 1 < path.len)) {
+            const start: usize = i + 1;
+            var end: usize = start;
+            var brace: bool = false;
+            if (path[start] == '{') {
+                brace = true;
+                end += 1;
+                while (end < path.len and path[end] != '}') : (end += 1) {}
+                if (end >= path.len) return error.UnclosedBrace;
+            } else {
+                while (end < path.len and (std.ascii.isAlphanumeric(path[end]) or path[end] == '_')) : (end += 1) {}
+            }
+            const var_name: []const u8 = if (brace) path[start + 1 .. end] else path[start..end];
+            const var_value: []const u8 = std.process.getEnvVarOwned(allocator, var_name) catch "";
+            defer allocator.free(var_value);
+            try result.appendSlice(var_value);
+            i = if (brace) end + 1 else end;
+        } else {
+            try result.append(path[i]);
+            i += 1;
+        }
+    }
+    return result.toOwnedSlice();
+}
+
+fn expandPath(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    const tilde_expanded = try expandTilde(allocator, path);
+    defer allocator.free(tilde_expanded);
+    return expandEnvVars(allocator, tilde_expanded);
 }
 
 fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {

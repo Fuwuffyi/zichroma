@@ -7,8 +7,11 @@ const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
 const template = @import("template.zig");
 
+// TODO: Implement better error messages for user
+
 // TODO: Try to generate more colors and get the better ones only (like 2/3 colors more than k)??
 // TODO: Implement fuzz to ensure that similar colors get merged before the clustering begins
+
 // TODO: Add more clustering functions
 
 pub fn main() !void {
