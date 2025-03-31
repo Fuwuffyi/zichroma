@@ -33,21 +33,13 @@ pub fn applyTemplate(template_path: []const u8, out_path: []const u8, colors: []
     const processed_contents: []const u8 = try buffer.toOwnedSlice();
     defer allocator.free(processed_contents);
     // Write the processed data to the out file
-    const out_file: std.fs.File = try openOrCreateFile(out_path);
+    const out_file: std.fs.File = try std.fs.cwd().createFile(out_path, .{});
     defer out_file.close();
     try out_file.writeAll(processed_contents);
     // Run the command after applying the template and colors
     if (command) |cmd| {
         try runCommand(allocator, cmd);
     }
-}
-
-fn openOrCreateFile(path: []const u8) !std.fs.File {
-    const existing_file: std.fs.File = std.fs.cwd().openFile(path, .{ .mode = .read_write }) catch |err| switch (err) {
-        error.FileNotFound => return try std.fs.cwd().createFile(path, .{}),
-        else => return err,
-    };
-    return existing_file;
 }
 
 fn findNextPlaceholderStart(content: []const u8, start_pos: usize) ?usize {
