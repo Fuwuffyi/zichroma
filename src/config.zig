@@ -35,6 +35,15 @@ pub const Config = struct {
             .profiles = std.StringHashMap(modulation_curve.ModulationCurve).init(allocator),
             .templates = std.StringHashMap(Template).init(allocator),
         };
+        errdefer {
+            allocator.free(config.profile);
+            var it = config.profiles.valueIterator();
+            while (it.next()) |c| {
+                c.deinit();
+            }
+            config.profiles.deinit();
+            config.templates.deinit();
+        }
         // Grab the configuration file
         const file: std.fs.File = try findConfigFile(allocator) orelse return logError(error.ConfigFileNotFound, .{});
         defer file.close();

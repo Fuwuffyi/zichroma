@@ -14,19 +14,30 @@ const errorMessages: std.StaticStringMap([]const u8) = std.StaticStringMap([]con
     .{"InvalidData", "The cache file is invalid.\nPath: {s}"},
     // Config errors
     .{"ConfigFileNotFound", "Could not locate a valid config file. Put one in '~/.config/zichroma/config.conf'."},
-    .{"ProfileNotFound", "The profile {s} is not defined in the config file."},
-    .{"InvalidColorSpace", "The color space {s} is not valid.\nPossible values: (rgb, hsl, xyz, lab)."},
-    .{"InvalidTheme", "The theme {s} is not valid.\nPossible values: (light, dark, auto)."},
-    .{"UnknownCoreSetting", "Option {s} not valid in Core."},
+    .{"ProfileNotFound", "The profile ({s}) is not defined in the config file."},
+    .{"InvalidColorSpace", "The color space ({s}) is not valid.\nPossible values: (rgb, hsl, xyz, lab)."},
+    .{"InvalidTheme", "The theme ({s}) is not valid.\nPossible values: (light, dark, auto)."},
+    .{"UnknownCoreSetting", "Option ({s}) not valid in Core."},
     .{"InvalidSectionHeader", "The section header is invalid.\nLine: {s}"},
-    .{"UnknownSection", "The section {s} is unknown.\nLine: {s}"},
+    .{"UnknownSection", "The section ({s}) is unknown.\nLine: {s}"},
     .{"InvalidKeyValue", "Key value pair not valid.\nLine: {s}"},
     .{"TooFewModulationValues", "There are not enough modulation values.\nCurrent values: {s}\nExample: (255, 100, 25)"},
     .{"TooManyModulationValues", "There are too many modulation values.\nCurrent values: {s}\nExample: (255, 100, 25)"},
-    .{"UnknownProfileSetting", "Option {s} not valid in Profile."},
-    .{"TemplateNotFound", "Template {s} is not defined in the config file."},
-    .{"UnknownTemplateSetting", "Option {s} not valid in Template."},
-    .{"OrphanedKeyValue", "The value for {s} is not within any section."}
+    .{"UnknownProfileSetting", "Option ({s}) not valid in Profile."},
+    .{"TemplateNotFound", "Template ({s}) is not defined in the config file."},
+    .{"UnknownTemplateSetting", "Option ({s}) not valid in Template."},
+    .{"OrphanedKeyValue", "The value for ({s}) is not within any section."},
+    // Template errors
+    .{"UnterminatedPlaceholder", "One of the placeholder variables has not been closed.\nPosition: {}"},
+    .{"UnknownColorType", "The color type ({s}) is not defined.\nPossible values: (pri, txt, acc)."},
+    .{"InvalidColorSpec", "The variable does not start with color.\nVariable: {s}"},
+    .{"InvalidColorIndex", "The index ({s}) for the color provided is not valid.\nVariable: {s}"},
+    .{"ColorIndexOutOfBounds", "The index ({}) for the color provided is out of bounds (must be >= 0 and < cluster_count).\nVariable: {s}"},
+    .{"InvalidAccentIndex", "The index ({s}) for the accent provided is not valid.\nVariable: {s}"},
+    .{"AccentIndexOutOfBounds", "The index ({}) for the color provided is out of bounds (must be >= 0 and < profile color count).\nVariable: {s}"},
+    .{"InvalidPlaceholderFormat", "The placeholder variable ({s}) is invalid."},
+    .{"InvalidColorProperty", "The color property ({s}) is not defined.\nCheck the documentation for all the properties."},
+    .{"CommandFailed", "The command ({s}) exited unexpectedly."}
 });
 
 pub fn logError(comptime err: anyerror, args: anytype) anyerror {

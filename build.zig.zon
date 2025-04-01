@@ -1,6 +1,6 @@
 .{
     .name = "zichroma",
-    .version = "1.1.1",
+    .version = "1.2.0",
     .dependencies = .{
         .zigimg = .{
             .url = "git+https://github.com/zigimg/zigimg.git#de306064e5f4add6012cb3ac8e483b73ffb32d3b",
