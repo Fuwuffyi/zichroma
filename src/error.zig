@@ -33,8 +33,8 @@ const errorMessages: std.StaticStringMap([]const u8) = std.StaticStringMap([]con
     .{"InvalidColorSpec", "The variable does not start with color.\nVariable: {s}"},
     .{"InvalidColorIndex", "The index ({s}) for the color provided is not valid.\nVariable: {s}"},
     .{"ColorIndexOutOfBounds", "The index ({}) for the color provided is out of bounds (must be >= 0 and < cluster_count).\nVariable: {s}"},
-    .{"InvalidAccentIndex", "The index ({s}) for the accent provided is not valid.\nVariable: {s}"},
-    .{"AccentIndexOutOfBounds", "The index ({}) for the color provided is out of bounds (must be >= 0 and < profile color count).\nVariable: {s}"},
+    .{"InvalidAccentIndex", "The index ({s}) for the accent provided is not valid."},
+    .{"AccentIndexOutOfBounds", "The index ({}) for the color provided is out of bounds (must be >= 0 and < profile color count)."},
     .{"InvalidPlaceholderFormat", "The placeholder variable ({s}) is invalid."},
     .{"InvalidColorProperty", "The color property ({s}) is not defined.\nCheck the documentation for all the properties."},
     .{"CommandFailed", "The command ({s}) exited unexpectedly."}

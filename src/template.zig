@@ -78,8 +78,8 @@ fn extractColorValue(color_type: []const u8, template_value: *const TemplateValu
         return &template_value.text_color;
     } else if (std.mem.startsWith(u8, color_type, "acc")) {
         const index_str: []const u8 = color_type["acc".len..];
-        const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return logError(error.InvalidAccentIndex, .{ index_str, template_value });
-        if (index >= template_value.accent_colors.len) return logError(error.AccentIndexOutOfBounds, .{ index, template_value });
+        const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return logError(error.InvalidAccentIndex, .{ index_str });
+        if (index >= template_value.accent_colors.len) return logError(error.AccentIndexOutOfBounds, .{ index });
         return &template_value.accent_colors[index];
     } else {
         return logError(error.UnknownColorType, .{ color_type });
