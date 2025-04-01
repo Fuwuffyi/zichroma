@@ -94,5 +94,6 @@ A few examples are as follows:
 
 ---
 
-#### Final note:
+#### Final notes:
+This project was heavily inspired by simplar projects: [Pywal](https://github.com/dylanaraps/pywal), [Wallbash](https://github.com/prasanthrangan/hyprdots/wiki/Wallbash), [Matugen](https://github.com/InioX/matugen).  
 *"Go forth and make the world adowable~"* 🐺💻🎨

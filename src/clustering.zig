@@ -1,14 +1,15 @@
 const std = @import("std");
 const palette = @import("palette.zig");
 const color = @import("color.zig");
+const logError = @import("error.zig").logError;
 
 const iter_threshold: comptime_float = 1e-6;
 
 pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.Color {
     // Error checking
     const k_usize: usize = @intCast(k);
-    if (pal.values.len == 0) return error.EmptyPalette;
-    if (k_usize == 0) return error.InvalidK;
+    if (pal.values.len == 0) return logError(error.EmptyPalette, .{});
+    if (k_usize == 0 or k_usize > pal.values.len) return logError(error.InvalidK, .{});
     // Generate "random" centroids
     const centroids: []color.Color = try allocator.alloc(color.Color, k_usize);
     errdefer allocator.free(centroids);

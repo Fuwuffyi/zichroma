@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const palette = @import("palette.zig");
 const color = @import("color.zig");
+const logError = @import("error.zig").logError;
 
 const cache_dir_name: []const u8 = "zichroma";
 
@@ -13,7 +14,7 @@ fn getCacheDir(allocator: std.mem.Allocator) ![]const u8 {
                 if (err != error.EnvironmentVariableNotFound) return err;
                 // Fallback to $HOME/.cache
                 const home_dir: []const u8 = std.process.getEnvVarOwned(allocator, "HOME") catch |e| {
-                    if (e == error.EnvironmentVariableNotFound) return error.MissingHomeDir;
+                    if (e == error.EnvironmentVariableNotFound) return logError(error.MissingHomeDir, .{});
                     return e;
                 };
                 defer allocator.free(home_dir);
@@ -25,7 +26,7 @@ fn getCacheDir(allocator: std.mem.Allocator) ![]const u8 {
         .windows => blk: {
             // Use %LOCALAPPDATA%
             const local_app_data: []u8 = std.process.getEnvVarOwned(allocator, "LOCALAPPDATA") catch |err| {
-                if (err == error.EnvironmentVariableNotFound) return error.MissingLocalAppData;
+                if (err == error.EnvironmentVariableNotFound) return logError(error.MissingLocalAppData, .{});
                 return err;
             };
             defer allocator.free(local_app_data);
@@ -34,13 +35,13 @@ fn getCacheDir(allocator: std.mem.Allocator) ![]const u8 {
         .macos => blk: {
             // Use ~/Library/Caches
             const home_dir: []const u8 = std.process.getEnvVarOwned(allocator, "HOME") catch |err| {
-                if (err == error.EnvironmentVariableNotFound) return error.MissingHomeDir;
+                if (err == error.EnvironmentVariableNotFound) return logError(error.MissingHomeDir, .{});
                 return err;
             };
             defer allocator.free(home_dir);
             break :blk try std.fs.path.join(allocator, &[_][]const u8{ home_dir, "Library", "Caches", cache_dir_name });
         },
-        else => return error.UnsupportedOS,
+        else => return logError(error.UnsupportedOS, .{}),
     };
     // Create the directory if it doesn't exist
     std.fs.cwd().makePath(cache_dir) catch |err| {
@@ -60,7 +61,7 @@ pub fn writePaletteCache(allocator: std.mem.Allocator, pal: *const palette.Palet
     // Open the file
     const file: std.fs.File = std.fs.cwd().createFile(cache_file, .{ .exclusive = true }) catch |err| {
         if (err == error.PathAlreadyExists) return;
-        return err;
+        return logError(error.FileCreationError, .{ cache_file });
     };
     defer file.close();
     // Write the palette data to the file
@@ -99,20 +100,20 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
     // Open cache file if it exists
     const file: std.fs.File = std.fs.cwd().openFile(cache_file, .{}) catch |err| {
         if (err == error.FileNotFound) return null;
-        return err;
+        return logError(error.FileOpenError, .{ cache_file });
     };
     defer file.close();
     // Read the palette data from the file
     const buffer: []u8 = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(buffer);
-    if (buffer.len == 0) return error.InvalidData;
+    if (buffer.len == 0) return logError(error.InvalidData, .{ cache_file });
     // Read the color type first
     const tag: std.meta.Tag(color.Color) = @enumFromInt(buffer[0]);
     var remaining: []u8 = buffer[1..]; // Skip the tag byte
     const entry_size = @sizeOf([3]f32) + @sizeOf(u32);
     const data_length: usize = remaining.len;
     const entries: usize = data_length / entry_size;
-    if (data_length % entry_size != 0) return error.InvalidData;
+    if (data_length % entry_size != 0) return logError(error.InvalidData, .{ cache_file });
     const values: []palette.Palette.Value = try allocator.alloc(palette.Palette.Value, entries);
     for (0..entries) |i| {
         const clr_bytes: []const u8 = remaining[0..@sizeOf([3]f32)];
