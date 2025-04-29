@@ -103,13 +103,12 @@ pub const Color = union(ColorSpace) {
 const ColorRGB = struct {
     values: Vec3,
 
-    fn toLinear(self: *const @This()) ColorRGB {
-        return .{
-            .r = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r / 12.92,
-            .g = if (self.g > 0.04045) std.math.pow(f32, (self.g + 0.055) / 1.055, 2.4) else self.g / 12.92,
-            .b = if (self.b > 0.04045) std.math.pow(f32, (self.b + 0.055) / 1.055, 2.4) else self.b / 12.92,
-        };
-    }
+    // Used to slightly improve the percieved color in distance/brightness calculations
+    const ColorWeights: Vec3 = .{ 0.2126, 0.7152, 0.0722 };
+    // Used to convert RGB to XYZ colors
+    const XYZ_XCoeff: Vec3 = .{ 0.4124, 0.3576, 0.1805 };
+    const XYZ_YCoeff: Vec3 = .{ 0.2126, 0.7152, 0.0722 };
+    const XYZ_ZCoeff: Vec3 = .{ 0.0193, 0.1192, 0.9505 };
 
     fn toHSL(self: *const @This()) ColorHSL {
         const max: f32 = @reduce(.Max, self.values);
@@ -143,15 +142,15 @@ const ColorRGB = struct {
         const other: Vec3 = self.values / @as(Vec3, @splat(12.92));
         const linear: Vec3 = @select(f32, mask, first, other);
         return .{
-            .x = linear[0] * 0.4124 + linear[1] * 0.3576 + linear[2] * 0.1805,
-            .y = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722,
-            .z = linear[0] * 0.0193 + linear[1] * 0.1192 + linear[2] * 0.9505,
+            .x = @reduce(.Add, linear * XYZ_XCoeff),
+            .y = @reduce(.Add, linear * XYZ_YCoeff),
+            .z = @reduce(.Add, linear * XYZ_ZCoeff),
         };
     }
 
     fn dst(self: *const @This(), other: *const ColorRGB) f32 {
         const d: Vec3 = self.values - other.values;
-        return 0.2126 * d[0] * d[0] + 0.7152 * d[1] * d[1] + 0.0722 * d[2] * d[2];
+        return @reduce(.Add, (d * d) * ColorWeights);
     }
 
     fn negative(self: ColorRGB) ColorRGB {
@@ -159,7 +158,7 @@ const ColorRGB = struct {
     }
 
     fn getBrightness(self: ColorRGB) f32 {
-        return 0.2126 * self.values[0] + 0.7152 * self.values[1] + 0.0722 * self.values[2];
+        return @reduce(.Add, self.values * ColorWeights);
     }
 };
 
