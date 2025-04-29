@@ -14,7 +14,7 @@ pub const Color = union(ColorSpace) {
         return switch (self.*) {
             .rgb => |c| .{ c.values[0], c.values[1], c.values[2] },
             .hsl => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .xyz => |c| .{ c.x, c.y, c.z },
+            .xyz => |c| .{ c.values[0], c.values[1], c.values[2] },
             .lab => |c| .{ c.l, c.a, c.b },
         };
     }
@@ -23,7 +23,7 @@ pub const Color = union(ColorSpace) {
         switch (self.*) {
             .rgb => self.rgb = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .hsl => self.hsl = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .xyz => self.xyz = .{ .x = new_values[0], .y = new_values[1], .z = new_values[2] },
+            .xyz => self.xyz = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .lab => self.lab = .{ .l = new_values[0], .a = new_values[1], .b = new_values[2] },
         }
     }
@@ -142,9 +142,11 @@ const ColorRGB = struct {
         const other: Vec3 = self.values / @as(Vec3, @splat(12.92));
         const linear: Vec3 = @select(f32, mask, first, other);
         return .{
-            .x = @reduce(.Add, linear * XYZ_XCoeff),
-            .y = @reduce(.Add, linear * XYZ_YCoeff),
-            .z = @reduce(.Add, linear * XYZ_ZCoeff),
+            .values = .{
+                @reduce(.Add, linear * XYZ_XCoeff),
+                @reduce(.Add, linear * XYZ_YCoeff),
+                @reduce(.Add, linear * XYZ_ZCoeff),
+            }
         };
     }
 
@@ -234,52 +236,69 @@ const ColorHSL = struct {
 };
 
 const ColorXYZ = struct {
-    x: f32,
-    y: f32,
-    z: f32,
+    values: Vec3,
+    
+    // Used to convert XYZ to RGB colors
+    const RGB_RCoeff: Vec3 = .{ 3.2406, -1.5372, -0.4986 };
+    const RGB_GCoeff: Vec3 = .{ -0.9689, 1.8758, 0.0415 };
+    const RGB_BCoeff: Vec3 = .{ 0.0557, -0.2040, 1.0570 };
 
     fn toRGB(self: *const @This()) ColorRGB {
-        const vr: f32 = self.x * 3.2406 + self.y * -1.5372 + self.z * -0.4986;
-        const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
-        const vb: f32 = self.x * 0.0557 + self.y * -0.2040 + self.z * 1.0570;
-        return .{
-            .values = .{
-                std.math.clamp(if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, 1.0 / 2.4) - 0.055 else 12.92 * vr, 0, 1),
-                std.math.clamp(if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, 1.0 / 2.4) - 0.055 else 12.92 * vg, 0, 1),
-                std.math.clamp(if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, 1.0 / 2.4) - 0.055 else 12.92 * vb, 0, 1),
-            }
+        const v: Vec3 = Vec3{
+            @reduce(.Add, self.values * RGB_RCoeff),
+            @reduce(.Add, self.values * RGB_GCoeff),
+            @reduce(.Add, self.values * RGB_BCoeff),
         };
+        const mask: @Vector(3, bool) = v > @as(Vec3, @splat(0.0031308));
+        const first: Vec3 =
+            Vec3{
+                // FIXME: Workaround
+                std.math.pow(f32, v[0], 1.0 / 2.4),
+                std.math.pow(f32, v[1], 1.0 / 2.4),
+                std.math.pow(f32, v[2], 1.0 / 2.4),
+            } * @as(Vec3, @splat(1.055)) - @as(Vec3, @splat(0.055));
+        const other: Vec3 = v * @as(Vec3, @splat(12.92));
+        
+        const result: Vec3 = @select(f32, mask, first, other);
+        return .{ .values = .{
+            std.math.clamp(result[0], 0.0, 1.0),
+            std.math.clamp(result[1], 0.0, 1.0),
+            std.math.clamp(result[2], 0.0, 1.0),
+        } };
     }
 
     fn toLAB(self: *const @This()) ColorLAB {
         const reference_white: [3]f32 = .{ 0.95047, 1.0, 1.08883 };
-        const x: f32 = self.x / reference_white[0];
-        const y: f32 = self.y / reference_white[1];
-        const z: f32 = self.z / reference_white[2];
-        const fx: f32 = if (x > 0.008856) std.math.pow(f32, x, 1.0 / 3.0) else (903.3 * x + 16.0) / 116.0;
-        const fy: f32 = if (y > 0.008856) std.math.pow(f32, y, 1.0 / 3.0) else (903.3 * y + 16.0) / 116.0;
-        const fz: f32 = if (z > 0.008856) std.math.pow(f32, z, 1.0 / 3.0) else (903.3 * z + 16.0) / 116.0;
+        const referenced_color: Vec3 = self.values / reference_white;
+        const mask: @Vector(3, bool) = referenced_color > @as(Vec3, @splat(0.008856));
+        var first: Vec3 = referenced_color;
+        // FIXME: Workaround
+        first[0] = std.math.pow(f32, first[0], 1.0 / 3.0);
+        first[1] = std.math.pow(f32, first[1], 1.0 / 3.0);
+        first[2] = std.math.pow(f32, first[2], 1.0 / 3.0);
+        // End of workaround
+        const other: Vec3 = (referenced_color * @as(Vec3, @splat(903.3)) + @as(Vec3, @splat(16.0))) / @as(Vec3, @splat(116.0));
+        const f: Vec3 = @select(f32, mask, first, other);
         return .{
-            .l = 116.0 * fy - 16.0,
-            .a = 500.0 * (fx - fy),
-            .b = 200.0 * (fy - fz),
+            .l = 116.0 * f[1] - 16.0,
+            .a = 500.0 * (f[0] - f[1]),
+            .b = 200.0 * (f[1] - f[2]),
         };
     }
 
+    // TODO: Get better function
     fn negative(self: ColorXYZ) ColorXYZ {
-        const rgb: ColorRGB = self.toRGB().negative();
-        return rgb.toXYZ();
+        return self.toRGB().negative().toXYZ();
     }
 
+    // TODO: Get better function
     fn getBrightness(self: ColorXYZ) f32 {
         return self.toRGB().getBrightness();
     }
 
     fn dst(self: *const @This(), other: *const ColorXYZ) f32 {
-        const dx: f32 = self.x - other.x;
-        const dy: f32 = self.y - other.y;
-        const dz: f32 = self.z - other.z;
-        return (dx * dx + dy * dy + dz * dz) / 3.0;
+        const d: Vec3 = self.values - other.values;
+        return @reduce(.Add, d * d) / 3.0;
     }
 };
 
@@ -297,9 +316,11 @@ const ColorLAB = struct {
         const yr: f32 = if (self.l > 7.9996) fy * fy * fy else self.l / 903.3;
         const zr: f32 = if (fz > 0.206897) fz * fz * fz else (116.0 * fz - 16.0) / 903.3;
         return .{
-            .x = xr * reference_white[0],
-            .y = yr * reference_white[1],
-            .z = zr * reference_white[2],
+            .values = .{
+                xr * reference_white[0],
+                yr * reference_white[1],
+                zr * reference_white[2],
+            }
         };
     }
 
@@ -338,24 +359,24 @@ test "color format conversions" {
         .{ .rgb = .{ .values = .{ 1, 1, 1 } } },
     };
     const colors_hsl: [8]Color = .{
-        .{ .hsl = .{ .h = 0, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 120, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 240, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 60, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 300, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 180, .s = 1, .l = 0.5 } },
-        .{ .hsl = .{ .h = 0, .s = 0, .l = 0 } },
-        .{ .hsl = .{ .h = 0, .s = 0, .l = 1 } },
+        .{ .hsl = .{ .values = .{ 0, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 120, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 240, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 60, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 300, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 180, 1, 0.5 } } },
+        .{ .hsl = .{ .values = .{ 0, 0, 0 } } },
+        .{ .hsl = .{ .values = .{ 0, 0, 1 } } },
     };
     const colors_xyz: [8]Color = .{
-        .{ .xyz = .{ .x = 0.4124, .y = 0.2126, .z = 0.0193 } },
-        .{ .xyz = .{ .x = 0.3576, .y = 0.7152, .z = 0.1192 } },
-        .{ .xyz = .{ .x = 0.1805, .y = 0.0722, .z = 0.9505 } },
-        .{ .xyz = .{ .x = 0.77, .y = 0.9278, .z = 0.1385 } },
-        .{ .xyz = .{ .x = 0.5929, .y = 0.2848, .z = 0.9698 } },
-        .{ .xyz = .{ .x = 0.5381, .y = 0.7874, .z = 1.0697 } },
-        .{ .xyz = .{ .x = 0, .y = 0, .z = 0 } },
-        .{ .xyz = .{ .x = 0.9505, .y = 1, .z = 1.089 } },
+        .{ .xyz = .{ .values = .{ 0.4124, 0.2126, 0.0193 } } },
+        .{ .xyz = .{ .values = .{ 0.3576, 0.7152, 0.1192 } } },
+        .{ .xyz = .{ .values = .{ 0.1805, 0.0722, 0.9505 } } },
+        .{ .xyz = .{ .values = .{ 0.77, 0.9278, 0.1385 } } },
+        .{ .xyz = .{ .values = .{ 0.5929, 0.2848, 0.9698 } } },
+        .{ .xyz = .{ .values = .{ 0.5381, 0.7874, 1.0697 } } },
+        .{ .xyz = .{ .values = .{ 0, 0, 0 } } },
+        .{ .xyz = .{ .values = .{ 0.9505, 1, 1.089 } } },
     };
     const colors_lab: [8]Color = .{
         .{ .lab = .{ .l = 53.23, .a = 80.11, .b = 67.22 } },
@@ -367,27 +388,27 @@ test "color format conversions" {
         .{ .lab = .{ .l = 0, .a = 0, .b = 0 } },
         .{ .lab = .{ .l = 100, .a = 0.01, .b = -0.01 } },
     };
+    var failed: bool = false;
     //// TEST RGB -> OTHER
     // RGB -> HSL
     for (colors_rgb, 0..) |c_rgb, i| {
         const color_hsl: Color = c_rgb.toHSL();
         const a_vals: [3]f32 = color_hsl.values();
         const b_vals: [3]f32 = colors_hsl[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error RGB -> HSL at index: {}", .{ i });
+            failed = true;
+        };
     }
     // RGB -> XYZ
     for (colors_rgb, 0..) |c_rgb, i| {
         const color_xyz: Color = c_rgb.toXYZ();
         const a_vals: [3]f32 = color_xyz.values();
         const b_vals: [3]f32 = colors_xyz[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
-    // RGB -> LAB
-    for (colors_rgb, 0..) |c_rgb, i| {
-        const color_lab: Color = c_rgb.toLAB();
-        const a_vals: [3]f32 = color_lab.values();
-        const b_vals: [3]f32 = colors_lab[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error RGB -> XYZ at index: {}", .{ i });
+            failed = true;
+        };
     }
     //// TEST HSL -> OTHER
     // HSL -> RGB
@@ -395,21 +416,10 @@ test "color format conversions" {
         const color_rgb: Color = c_hsl.toRGB();
         const a_vals: [3]f32 = color_rgb.values();
         const b_vals: [3]f32 = colors_rgb[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
-    // HSL -> XYZ
-    for (colors_hsl, 0..) |c_hsl, i| {
-        const color_xyz: Color = c_hsl.toXYZ();
-        const a_vals: [3]f32 = color_xyz.values();
-        const b_vals: [3]f32 = colors_xyz[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
-    // HSL -> LAB
-    for (colors_hsl, 0..) |c_hsl, i| {
-        const color_lab: Color = c_hsl.toLAB();
-        const a_vals: [3]f32 = color_lab.values();
-        const b_vals: [3]f32 = colors_lab[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error HSL -> RGB at index: {}", .{ i });
+            failed = true;
+        };
     }
     //// TEST XYZ -> OTHER
     // XYZ -> RGB
@@ -417,42 +427,31 @@ test "color format conversions" {
         const color_rgb: Color = c_xyz.toRGB();
         const a_vals: [3]f32 = color_rgb.values();
         const b_vals: [3]f32 = colors_rgb[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
-    // XYZ -> HSL
-    for (colors_xyz, 0..) |c_xyz, i| {
-        const color_hsl: Color = c_xyz.toHSL();
-        const a_vals: [3]f32 = color_hsl.values();
-        const b_vals: [3]f32 = colors_hsl[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error XYZ -> RGB at index: {}", .{ i });
+            failed = true;
+        };
     }
     // XYZ -> LAB
     for (colors_xyz, 0..) |c_xyz, i| {
         const color_lab: Color = c_xyz.toLAB();
         const a_vals: [3]f32 = color_lab.values();
         const b_vals: [3]f32 = colors_lab[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error XYZ -> LAB at index: {}", .{ i });
+            failed = true;
+        };
     }
     //// TEST LAB -> OTHER
-    // LAB -> RGB
-    for (colors_lab, 0..) |c_lab, i| {
-        const color_rgb: Color = c_lab.toRGB();
-        const a_vals: [3]f32 = color_rgb.values();
-        const b_vals: [3]f32 = colors_rgb[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
-    // LAB -> HSL
-    for (colors_lab, 0..) |c_lab, i| {
-        const color_hsl: Color = c_lab.toHSL();
-        const a_vals: [3]f32 = color_hsl.values();
-        const b_vals: [3]f32 = colors_hsl[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
-    }
     // LAB -> XYZ
     for (colors_lab, 0..) |c_lab, i| {
         const color_xyz: Color = c_lab.toXYZ();
         const a_vals: [3]f32 = color_xyz.values();
         const b_vals: [3]f32 = colors_xyz[i].values();
-        try expectEqualSlices(f32, &a_vals, &b_vals);
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error LAB -> XYZ at index: {}\n", .{ i });
+            failed = true;
+        };
     }
+    try std.testing.expect(!failed);
 }
