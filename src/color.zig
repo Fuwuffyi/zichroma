@@ -13,7 +13,7 @@ pub const Color = union(ColorSpace) {
     pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
             .rgb => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .hsl => |c| .{ c.h, c.s, c.l },
+            .hsl => |c| .{ c.values[0], c.values[1], c.values[2] },
             .xyz => |c| .{ c.x, c.y, c.z },
             .lab => |c| .{ c.l, c.a, c.b },
         };
@@ -22,7 +22,7 @@ pub const Color = union(ColorSpace) {
     pub inline fn setValues(self: *@This(), new_values: [3]f32) void {
         switch (self.*) {
             .rgb => self.rgb = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .hsl => self.hsl = .{ .h = new_values[0], .s = new_values[1], .l = new_values[2] },
+            .hsl => self.hsl = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .xyz => self.xyz = .{ .x = new_values[0], .y = new_values[1], .z = new_values[2] },
             .lab => self.lab = .{ .l = new_values[0], .a = new_values[1], .b = new_values[2] },
         }
@@ -128,7 +128,7 @@ const ColorRGB = struct {
         h = @mod(h, 360.0);
         const l: f32 = (max + min) / 2.0;
         const s: f32 = if (delta == 0) 0.0 else delta / (1.0 - @abs(2.0 * l - 1.0));
-        return .{ .h = h, .s = s, .l = l };
+        return .{ .values = .{ h, s, l } };
     }
 
     fn toXYZ(self: *const @This()) ColorXYZ {
@@ -163,19 +163,17 @@ const ColorRGB = struct {
 };
 
 const ColorHSL = struct {
-    h: f32,
-    s: f32,
-    l: f32,
+    values: Vec3,
 
     fn toRGB(self: *const @This()) ColorRGB {
-        if (self.s == 0.0) {
-            return .{ .values = @as(Vec3, @splat(self.l)) };
+        if (self.values[1] == 0.0) {
+            return .{ .values = @as(Vec3, @splat(self.values[2])) };
         }
-        const chroma: f32 = (1.0 - @abs(2.0 * self.l - 1.0)) * self.s;
-        const h_prime: f32 = self.h / 60.0;
+        const chroma: f32 = (1.0 - @abs(2.0 * self.values[2] - 1.0)) * self.values[1];
+        const h_prime: f32 = self.values[0] / 60.0;
         const sector: u32 = @mod(@as(u32, @intFromFloat(h_prime)), 6);
         const x: f32 = chroma * (1.0 - @abs(@mod(h_prime, 2.0) - 1.0));
-        const m: f32 = self.l - chroma / 2.0;
+        const m: f32 = self.values[2] - chroma / 2.0;
         var r: f32 = 0.0;
         var g: f32 = 0.0;
         var b: f32 = 0.0;
@@ -216,28 +214,22 @@ const ColorHSL = struct {
     }
 
     fn negative(self: ColorHSL) ColorHSL {
-        return .{
-            .h = self.h,
-            .s = self.s,
-            .l = 1.0 - self.l,
-        };
+        var vals: Vec3 = self.values;
+        vals[2] = 1.0 - vals[2];
+        return .{ .values = vals };
     }
 
     fn getBrightness(self: ColorHSL) f32 {
-        return self.l;
+        return self.values[2];
     }
 
     fn dst(self: *const @This(), other: *const ColorHSL) f32 {
-        const h1_rad: f32 = std.math.degreesToRadians(self.h);
-        const h2_rad: f32 = std.math.degreesToRadians(other.h);
-        const x1: f32 = self.s * @cos(h1_rad);
-        const y1: f32 = self.s * @sin(h1_rad);
-        const x2: f32 = other.s * @cos(h2_rad);
-        const y2: f32 = other.s * @sin(h2_rad);
-        const dx: f32 = x1 - x2;
-        const dy: f32 = y1 - y2;
-        const dz: f32 = self.l - other.l;
-        return (dx * dx + dy * dy + dz * dz) / 3.0;
+        const h1_rad: f32 = std.math.degreesToRadians(self.values[0]);
+        const h2_rad: f32 = std.math.degreesToRadians(other.values[0]);
+        const vec1: Vec3 = .{ self.values[1] * @cos(h1_rad), self.values[1] * @sin(h1_rad), self.values[2] };
+        const vec2: Vec3 = .{ other.values[1] * @cos(h2_rad), other.values[1] * @sin(h2_rad), self.values[2] };
+        const d: Vec3 = vec1 - vec2;
+        return @reduce(.Add, d * d) / 3.0;
     }
 };
 

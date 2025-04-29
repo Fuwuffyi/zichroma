@@ -64,9 +64,9 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
         template_colors[i].primary_color = col.toRGB();
         template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
         var col_neg_hsl: color.Color = col.negative().toHSL();
-        col_neg_hsl.hsl.s = 0.1;
-        col_neg_hsl.hsl.l *= if (light_theme) 0.16 else 1.88;
-        col_neg_hsl.hsl.l = std.math.clamp(col_neg_hsl.hsl.l, 0.0, 1.0);
+        col_neg_hsl.hsl.values[1] = 0.1;
+        col_neg_hsl.hsl.values[2] *= if (light_theme) 0.16 else 1.88;
+        col_neg_hsl.hsl.values[2] = std.math.clamp(col_neg_hsl.hsl.values[2], 0.0, 1.0);
         template_colors[i].text_color = col_neg_hsl.toRGB();
     }
     return template_colors;
