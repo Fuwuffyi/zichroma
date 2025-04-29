@@ -10,19 +10,19 @@ pub const Color = union(ColorSpace) {
 
     pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
-            .rgb => self.rgb.values(),
-            .hsl => self.hsl.values(),
-            .xyz => self.xyz.values(),
-            .lab => self.lab.values(),
+            .rgb => |c| .{ c.r, c.g, c.b },
+            .hsl => |c| .{ c.h, c.s, c.l },
+            .xyz => |c| .{ c.x, c.y, c.z },
+            .lab => |c| .{ c.l, c.a, c.b },
         };
     }
 
     pub inline fn setValues(self: *@This(), new_values: [3]f32) void {
         switch (self.*) {
-            .rgb => self.rgb.setValues(new_values),
-            .hsl => self.hsl.setValues(new_values),
-            .xyz => self.xyz.setValues(new_values),
-            .lab => self.lab.setValues(new_values),
+            .rgb => self.rgb = .{ .r = new_values[0], .g = new_values[1], .b = new_values[2] },
+            .hsl => self.hsl = .{ .h = new_values[0], .s = new_values[1], .l = new_values[2] },
+            .xyz => self.xyz = .{ .x = new_values[0], .y = new_values[1], .z = new_values[2] },
+            .lab => self.lab = .{ .l = new_values[0], .a = new_values[1], .b = new_values[2] },
         }
     }
 
@@ -103,16 +103,6 @@ const ColorRGB = struct {
     g: f32,
     b: f32,
 
-    fn values(self: *const @This()) [3]f32 {
-        return .{ self.r, self.g, self.b };
-    }
-
-    fn setValues(self: *@This(), new_values: [3]f32) void {
-        self.r = new_values[0];
-        self.g = new_values[1];
-        self.b = new_values[2];
-    }
-
     fn toLinear(self: *const @This()) ColorRGB {
         return .{
             .r = if (self.r > 0.04045) std.math.pow(f32, (self.r + 0.055) / 1.055, 2.4) else self.r / 12.92,
@@ -175,16 +165,6 @@ const ColorHSL = struct {
     h: f32,
     s: f32,
     l: f32,
-
-    fn values(self: *const @This()) [3]f32 {
-        return .{ self.h, self.s, self.l };
-    }
-
-    fn setValues(self: *@This(), new_values: [3]f32) void {
-        self.h = new_values[0];
-        self.s = new_values[1];
-        self.l = new_values[2];
-    }
 
     fn toRGB(self: *const @This()) ColorRGB {
         if (self.s == 0.0) {
@@ -263,16 +243,6 @@ const ColorXYZ = struct {
     y: f32,
     z: f32,
 
-    fn values(self: *const @This()) [3]f32 {
-        return .{ self.x, self.y, self.z };
-    }
-
-    fn setValues(self: *@This(), new_values: [3]f32) void {
-        self.x = new_values[0];
-        self.y = new_values[1];
-        self.z = new_values[2];
-    }
-
     fn toRGB(self: *const @This()) ColorRGB {
         const vr: f32 = self.x * 3.2406 + self.y * -1.5372 + self.z * -0.4986;
         const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
@@ -320,16 +290,6 @@ const ColorLAB = struct {
     l: f32,
     a: f32,
     b: f32,
-
-    fn values(self: *const @This()) [3]f32 {
-        return .{ self.l, self.a, self.b };
-    }
-
-    fn setValues(self: *@This(), new_values: [3]f32) void {
-        self.l = new_values[0];
-        self.a = new_values[1];
-        self.b = new_values[2];
-    }
 
     fn toXYZ(self: *const @This()) ColorXYZ {
         const reference_white: [3]f32 = .{ 0.95047, 1.0, 1.08883 };
