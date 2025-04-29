@@ -1,10 +1,12 @@
 .{
-    .name = "zichroma",
+    .name = .zichroma,
+    .fingerprint = 0x9e5ba517cdd471c,
     .version = "1.2.0",
     .dependencies = .{
         .zigimg = .{
-            .url = "git+https://github.com/zigimg/zigimg.git#de306064e5f4add6012cb3ac8e483b73ffb32d3b",
-            .hash = "1220b8c391784c19b03bcca04243318b26765c6cbf10c4c5e79861a9d674620c88e7",
+            // Use fork of zigim for 1.14.0 support
+            .url = "git+https://github.com/TUSF/zigimg.git#256cf2655bb887a30c57d8cbc1b9590643f0a824",
+            .hash = "zigimg-0.1.0-lly-O3AVEQBq5UYuvW77W180h6v41vJ9WXtBhrbLwtNH",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "LICENSE", "README.md" },
