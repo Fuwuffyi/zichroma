@@ -12,19 +12,13 @@ pub const Color = union(ColorSpace) {
 
     pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
-            .rgb => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .hsl => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .xyz => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .lab => |c| .{ c.values[0], c.values[1], c.values[2] },
+            inline else => |c| c.values,
         };
     }
 
     pub inline fn setValues(self: *@This(), new_values: [3]f32) void {
         switch (self.*) {
-            .rgb => self.rgb = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .hsl => self.hsl = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .xyz => self.xyz = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .lab => self.lab = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
+            inline else => |*c| c.values = new_values,
         }
     }
 
@@ -75,10 +69,7 @@ pub const Color = union(ColorSpace) {
 
     pub inline fn getBrightness(self: Color) f32 {
         return switch (self) {
-            .rgb => |rgb| rgb.getBrightness(),
-            .hsl => |hsl| hsl.getBrightness(),
-            .xyz => |xyz| xyz.getBrightness(),
-            .lab => |lab| lab.getBrightness(),
+            inline else => |c| c.getBrightness()
         };
     }
 
@@ -176,49 +167,21 @@ const ColorHSL = struct {
         const sector: u32 = @mod(@as(u32, @intFromFloat(h_prime)), 6);
         const x: f32 = chroma * (1.0 - @abs(@mod(h_prime, 2.0) - 1.0));
         const m: f32 = self.values[2] - chroma / 2.0;
-        var r: f32 = 0.0;
-        var g: f32 = 0.0;
-        var b: f32 = 0.0;
-        switch (sector) {
-            0 => {
-                r = chroma;
-                g = x;
-            },
-            1 => {
-                r = x;
-                g = chroma;
-            },
-            2 => {
-                g = chroma;
-                b = x;
-            },
-            3 => {
-                g = x;
-                b = chroma;
-            },
-            4 => {
-                r = x;
-                b = chroma;
-            },
-            5 => {
-                r = chroma;
-                b = x;
-            },
+        var rgb: Vec3 = switch (sector) {
+            0 => .{ chroma, x, 0.0 },
+            1 => .{ x, chroma, 0.0 },
+            2 => .{ 0.0, chroma, x },
+            3 => .{ 0.0, x, chroma },
+            4 => .{ x, 0.0, chroma },
+            5 => .{ chroma, 0.0, x },
             else => unreachable,
-        }
-        return .{
-            .values = .{
-                std.math.clamp(r + m, 0.0, 1.0),
-                std.math.clamp(g + m, 0.0, 1.0),
-                std.math.clamp(b + m, 0.0, 1.0),
-            }
         };
+        rgb += @as(Vec3, @splat(m));
+        return .{ .values = @min(@max(rgb, @as(Vec3, @splat(0.0))), @as(Vec3, @splat(1.0))) };
     }
 
     fn negative(self: ColorHSL) ColorHSL {
-        var vals: Vec3 = self.values;
-        vals[2] = 1.0 - vals[2];
-        return .{ .values = vals };
+        return .{ .values = .{ self.values[0], self.values[1], 1.0 - self.values[2] } };
     }
 
     fn getBrightness(self: ColorHSL) f32 {
@@ -260,11 +223,7 @@ const ColorXYZ = struct {
         const other: Vec3 = v * @as(Vec3, @splat(12.92));
         
         const result: Vec3 = @select(f32, mask, first, other);
-        return .{ .values = .{
-            std.math.clamp(result[0], 0.0, 1.0),
-            std.math.clamp(result[1], 0.0, 1.0),
-            std.math.clamp(result[2], 0.0, 1.0),
-        } };
+        return .{ .values = @min(@max(result, @as(Vec3, @splat(0.0))), @as(Vec3, @splat(1.0))) };
     }
 
     fn toLAB(self: *const @This()) ColorLAB {
