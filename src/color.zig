@@ -15,7 +15,7 @@ pub const Color = union(ColorSpace) {
             .rgb => |c| .{ c.values[0], c.values[1], c.values[2] },
             .hsl => |c| .{ c.values[0], c.values[1], c.values[2] },
             .xyz => |c| .{ c.values[0], c.values[1], c.values[2] },
-            .lab => |c| .{ c.l, c.a, c.b },
+            .lab => |c| .{ c.values[0], c.values[1], c.values[2] },
         };
     }
 
@@ -24,7 +24,7 @@ pub const Color = union(ColorSpace) {
             .rgb => self.rgb = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .hsl => self.hsl = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .xyz => self.xyz = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
-            .lab => self.lab = .{ .l = new_values[0], .a = new_values[1], .b = new_values[2] },
+            .lab => self.lab = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
         }
     }
 
@@ -244,7 +244,7 @@ const ColorXYZ = struct {
     const RGB_BCoeff: Vec3 = .{ 0.0557, -0.2040, 1.0570 };
 
     fn toRGB(self: *const @This()) ColorRGB {
-        const v: Vec3 = Vec3{
+        const v: Vec3 = .{
             @reduce(.Add, self.values * RGB_RCoeff),
             @reduce(.Add, self.values * RGB_GCoeff),
             @reduce(.Add, self.values * RGB_BCoeff),
@@ -279,11 +279,11 @@ const ColorXYZ = struct {
         // End of workaround
         const other: Vec3 = (referenced_color * @as(Vec3, @splat(903.3)) + @as(Vec3, @splat(16.0))) / @as(Vec3, @splat(116.0));
         const f: Vec3 = @select(f32, mask, first, other);
-        return .{
-            .l = 116.0 * f[1] - 16.0,
-            .a = 500.0 * (f[0] - f[1]),
-            .b = 200.0 * (f[1] - f[2]),
-        };
+        return .{ .values = .{
+            116.0 * f[1] - 16.0,
+            500.0 * (f[0] - f[1]),
+            200.0 * (f[1] - f[2]),
+        } };
     }
 
     // TODO: Get better function
@@ -303,18 +303,19 @@ const ColorXYZ = struct {
 };
 
 const ColorLAB = struct {
-    l: f32,
-    a: f32,
-    b: f32,
+    values: Vec3,
 
     fn toXYZ(self: *const @This()) ColorXYZ {
         const reference_white: [3]f32 = .{ 0.95047, 1.0, 1.08883 };
-        const fy: f32 = (self.l + 16.0) / 116.0;
-        const fx: f32 = self.a / 500.0 + fy;
-        const fz: f32 = fy - self.b / 200.0;
+        
+        const fy: f32 = (self.values[0] + 16.0) / 116.0;
+        const fx: f32 = self.values[1] / 500.0 + fy;
+        const fz: f32 = fy - self.values[2] / 200.0;
+        
         const xr: f32 = if (fx > 0.206897) fx * fx * fx else (116.0 * fx - 16.0) / 903.3;
-        const yr: f32 = if (self.l > 7.9996) fy * fy * fy else self.l / 903.3;
+        const yr: f32 = if (self.values[0] > 7.9996) fy * fy * fy else self.values[0] / 903.3;
         const zr: f32 = if (fz > 0.206897) fz * fz * fz else (116.0 * fz - 16.0) / 903.3;
+        
         return .{
             .values = .{
                 xr * reference_white[0],
@@ -325,22 +326,21 @@ const ColorLAB = struct {
     }
 
     fn negative(self: ColorLAB) ColorLAB {
-        return .{
-            .l = 100.0 - self.l,
-            .a = -self.a,
-            .b = -self.b,
-        };
+        return .{ .values = .{
+            100.0 - self.values[0],
+            -self.values[1],
+            -self.values[2],
+        } };
     }
 
+    // TODO: Get better function
     fn getBrightness(self: ColorLAB) f32 {
-        return self.l / 100.0;
+        return self.toXYZ().getBrightness();
     }
 
     fn dst(self: *const @This(), other: *const ColorLAB) f32 {
-        const dl: f32 = self.l - other.l;
-        const da: f32 = self.a - other.a;
-        const db: f32 = self.b - other.b;
-        return (dl * dl + da * da + db * db) * 7.08856e-6;
+        const d: Vec3 = self.values - other.values;
+        return @reduce(.Add, d * d) * 7.08856e-6;
     }
 };
 
@@ -379,14 +379,14 @@ test "color format conversions" {
         .{ .xyz = .{ .values = .{ 0.9505, 1, 1.089 } } },
     };
     const colors_lab: [8]Color = .{
-        .{ .lab = .{ .l = 53.23, .a = 80.11, .b = 67.22 } },
-        .{ .lab = .{ .l = 87.74, .a = -86.18, .b = 83.18 } },
-        .{ .lab = .{ .l = 32.3, .a = 79.2, .b = -107.86 } },
-        .{ .lab = .{ .l = 97.14, .a = -21.56, .b = 94.48 } },
-        .{ .lab = .{ .l = 60.32, .a = 98.25, .b = -60.84 } },
-        .{ .lab = .{ .l = 91.12, .a = -48.08, .b = -14.14 } },
-        .{ .lab = .{ .l = 0, .a = 0, .b = 0 } },
-        .{ .lab = .{ .l = 100, .a = 0.01, .b = -0.01 } },
+        .{ .lab = .{ .values = .{ 53.23, 80.11, 67.22 } } },
+        .{ .lab = .{ .values = .{ 87.74, -86.18, 83.18 } } },
+        .{ .lab = .{ .values = .{ 32.3, 79.2, -107.86 } } },
+        .{ .lab = .{ .values = .{ 97.14, -21.56, 94.48 } } },
+        .{ .lab = .{ .values = .{ 60.32, 98.25, -60.84 } } },
+        .{ .lab = .{ .values = .{ 91.12, -48.08, -14.14 } } },
+        .{ .lab = .{ .values = .{ 0, 0, 0 } } },
+        .{ .lab = .{ .values = .{ 100, 0.01, -0.01 } } },
     };
     var failed: bool = false;
     //// TEST RGB -> OTHER
