@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const Vec3 = @Vector(3, f32);
+
 pub const ColorSpace = enum { rgb, hsl, xyz, lab };
 
 pub const Color = union(ColorSpace) {
@@ -10,7 +12,7 @@ pub const Color = union(ColorSpace) {
 
     pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
-            .rgb => |c| .{ c.r, c.g, c.b },
+            .rgb => |c| .{ c.values[0], c.values[1], c.values[2] },
             .hsl => |c| .{ c.h, c.s, c.l },
             .xyz => |c| .{ c.x, c.y, c.z },
             .lab => |c| .{ c.l, c.a, c.b },
@@ -19,7 +21,7 @@ pub const Color = union(ColorSpace) {
 
     pub inline fn setValues(self: *@This(), new_values: [3]f32) void {
         switch (self.*) {
-            .rgb => self.rgb = .{ .r = new_values[0], .g = new_values[1], .b = new_values[2] },
+            .rgb => self.rgb = .{ .values = .{ new_values[0], new_values[1], new_values[2] } },
             .hsl => self.hsl = .{ .h = new_values[0], .s = new_values[1], .l = new_values[2] },
             .xyz => self.xyz = .{ .x = new_values[0], .y = new_values[1], .z = new_values[2] },
             .lab => self.lab = .{ .l = new_values[0], .a = new_values[1], .b = new_values[2] },
@@ -99,9 +101,7 @@ pub const Color = union(ColorSpace) {
 };
 
 const ColorRGB = struct {
-    r: f32,
-    g: f32,
-    b: f32,
+    values: Vec3,
 
     fn toLinear(self: *const @This()) ColorRGB {
         return .{
@@ -112,17 +112,17 @@ const ColorRGB = struct {
     }
 
     fn toHSL(self: *const @This()) ColorHSL {
-        const max: f32 = @max(self.r, @max(self.g, self.b));
-        const min: f32 = @min(self.r, @min(self.g, self.b));
+        const max: f32 = @reduce(.Max, self.values);
+        const min: f32 = @reduce(.Min, self.values);
         const delta: f32 = max - min;
         var h: f32 = 0.0;
         if (delta != 0) {
-            if (max == self.r) {
-                h = (self.g - self.b) / delta;
-            } else if (max == self.g) {
-                h = 2.0 + (self.b - self.r) / delta;
+            if (max == self.values[0]) {
+                h = (self.values[1] - self.values[2]) / delta;
+            } else if (max == self.values[1]) {
+                h = 2.0 + (self.values[2] - self.values[0]) / delta;
             } else {
-                h = 4.0 + (self.r - self.g) / delta;
+                h = 4.0 + (self.values[0] - self.values[1]) / delta;
             }
             h *= 60.0;
         }
@@ -133,31 +133,33 @@ const ColorRGB = struct {
     }
 
     fn toXYZ(self: *const @This()) ColorXYZ {
-        const linear: ColorRGB = self.toLinear();
+        const mask: @Vector(3, bool) = self.values > @as(Vec3, @splat(0.04045));
+        var first: Vec3 = (self.values + @as(Vec3, @splat(0.055))) / @as(Vec3, @splat(1.055));
+        // FIXME: Workaround
+        first[0] = std.math.pow(f32, first[0], 2.4);
+        first[1] = std.math.pow(f32, first[1], 2.4);
+        first[2] = std.math.pow(f32, first[2], 2.4);
+        // End of workaround
+        const other: Vec3 = self.values / @as(Vec3, @splat(12.92));
+        const linear: Vec3 = @select(f32, mask, first, other);
         return .{
-            .x = linear.r * 0.4124 + linear.g * 0.3576 + linear.b * 0.1805,
-            .y = linear.r * 0.2126 + linear.g * 0.7152 + linear.b * 0.0722,
-            .z = linear.r * 0.0193 + linear.g * 0.1192 + linear.b * 0.9505,
+            .x = linear[0] * 0.4124 + linear[1] * 0.3576 + linear[2] * 0.1805,
+            .y = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722,
+            .z = linear[0] * 0.0193 + linear[1] * 0.1192 + linear[2] * 0.9505,
         };
     }
 
     fn dst(self: *const @This(), other: *const ColorRGB) f32 {
-        const dr: f32 = self.r - other.r;
-        const dg: f32 = self.g - other.g;
-        const db: f32 = self.b - other.b;
-        return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
+        const d: Vec3 = self.values - other.values;
+        return 0.2126 * d[0] * d[0] + 0.7152 * d[1] * d[1] + 0.0722 * d[2] * d[2];
     }
 
     fn negative(self: ColorRGB) ColorRGB {
-        return .{
-            .r = 1.0 - self.r,
-            .g = 1.0 - self.g,
-            .b = 1.0 - self.b,
-        };
+        return .{ .values = @as(Vec3, @splat(1.0)) - self.values };
     }
 
     fn getBrightness(self: ColorRGB) f32 {
-        return 0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b;
+        return 0.2126 * self.values[0] + 0.7152 * self.values[1] + 0.0722 * self.values[2];
     }
 };
 
@@ -168,7 +170,7 @@ const ColorHSL = struct {
 
     fn toRGB(self: *const @This()) ColorRGB {
         if (self.s == 0.0) {
-            return .{ .r = self.l, .g = self.l, .b = self.l };
+            return .{ .values = @as(Vec3, @splat(self.l)) };
         }
         const chroma: f32 = (1.0 - @abs(2.0 * self.l - 1.0)) * self.s;
         const h_prime: f32 = self.h / 60.0;
@@ -206,9 +208,11 @@ const ColorHSL = struct {
             else => unreachable,
         }
         return .{
-            .r = std.math.clamp(r + m, 0.0, 1.0),
-            .g = std.math.clamp(g + m, 0.0, 1.0),
-            .b = std.math.clamp(b + m, 0.0, 1.0),
+            .values = .{
+                std.math.clamp(r + m, 0.0, 1.0),
+                std.math.clamp(g + m, 0.0, 1.0),
+                std.math.clamp(b + m, 0.0, 1.0),
+            }
         };
     }
 
@@ -248,9 +252,11 @@ const ColorXYZ = struct {
         const vg: f32 = self.x * -0.9689 + self.y * 1.8758 + self.z * 0.0415;
         const vb: f32 = self.x * 0.0557 + self.y * -0.2040 + self.z * 1.0570;
         return .{
-            .r = std.math.clamp(if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, 1.0 / 2.4) - 0.055 else 12.92 * vr, 0, 1),
-            .g = std.math.clamp(if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, 1.0 / 2.4) - 0.055 else 12.92 * vg, 0, 1),
-            .b = std.math.clamp(if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, 1.0 / 2.4) - 0.055 else 12.92 * vb, 0, 1),
+            .values = .{
+                std.math.clamp(if (vr > 0.0031308) 1.055 * std.math.pow(f32, vr, 1.0 / 2.4) - 0.055 else 12.92 * vr, 0, 1),
+                std.math.clamp(if (vg > 0.0031308) 1.055 * std.math.pow(f32, vg, 1.0 / 2.4) - 0.055 else 12.92 * vg, 0, 1),
+                std.math.clamp(if (vb > 0.0031308) 1.055 * std.math.pow(f32, vb, 1.0 / 2.4) - 0.055 else 12.92 * vb, 0, 1),
+            }
         };
     }
 
@@ -331,14 +337,14 @@ const expectEqualSlices = std.testing.expectEqualSlices;
 test "color format conversions" {
     // FIXME: Allow some bit of tolerance to tests, as values provided are not f32 precise lmao
     const colors_rgb: [8]Color = .{
-        .{ .rgb = .{ .r = 1, .g = 0, .b = 0 } },
-        .{ .rgb = .{ .r = 0, .g = 1, .b = 0 } },
-        .{ .rgb = .{ .r = 0, .g = 0, .b = 1 } },
-        .{ .rgb = .{ .r = 1, .g = 1, .b = 0 } },
-        .{ .rgb = .{ .r = 1, .g = 0, .b = 1 } },
-        .{ .rgb = .{ .r = 0, .g = 1, .b = 1 } },
-        .{ .rgb = .{ .r = 0, .g = 0, .b = 0 } },
-        .{ .rgb = .{ .r = 1, .g = 1, .b = 1 } },
+        .{ .rgb = .{ .values = .{ 1, 0, 0 } } },
+        .{ .rgb = .{ .values = .{ 0, 1, 0 } } },
+        .{ .rgb = .{ .values = .{ 0, 0, 1 } } },
+        .{ .rgb = .{ .values = .{ 1, 1, 0 } } },
+        .{ .rgb = .{ .values = .{ 1, 0, 1 } } },
+        .{ .rgb = .{ .values = .{ 0, 1, 1 } } },
+        .{ .rgb = .{ .values = .{ 0, 0, 0 } } },
+        .{ .rgb = .{ .values = .{ 1, 1, 1 } } },
     };
     const colors_hsl: [8]Color = .{
         .{ .hsl = .{ .h = 0, .s = 1, .l = 0.5 } },
@@ -356,9 +362,9 @@ test "color format conversions" {
         .{ .xyz = .{ .x = 0.1805, .y = 0.0722, .z = 0.9505 } },
         .{ .xyz = .{ .x = 0.77, .y = 0.9278, .z = 0.1385 } },
         .{ .xyz = .{ .x = 0.5929, .y = 0.2848, .z = 0.9698 } },
-        .{ .xyz = .{ .x = 0.5381, .y = 0.7874, .z = 1.0697 } }, // ???? Why > 1 (> 100 should not be possible)
+        .{ .xyz = .{ .x = 0.5381, .y = 0.7874, .z = 1.0697 } },
         .{ .xyz = .{ .x = 0, .y = 0, .z = 0 } },
-        .{ .xyz = .{ .x = 0.9505, .y = 1, .z = 1.089 } }, // ???? Why > 1 (> 100 should not be possible)
+        .{ .xyz = .{ .x = 0.9505, .y = 1, .z = 1.089 } },
     };
     const colors_lab: [8]Color = .{
         .{ .lab = .{ .l = 53.23, .a = 80.11, .b = 67.22 } },

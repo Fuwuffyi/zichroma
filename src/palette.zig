@@ -45,7 +45,7 @@ pub const Palette = struct {
             const g: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 8)))) / 255.0;
             const b: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key)))) / 255.0;
             // Save to lab
-            const clr_rgb: color.Color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
+            const clr_rgb: color.Color = .{ .rgb = .{ .values = .{ r, g, b } } };
             values[i] = .{ .clr = undefined, .weight = entry.value_ptr.* };
             values[i].clr = switch(colorspace) {
                 .rgb => clr_rgb.toRGB(),
