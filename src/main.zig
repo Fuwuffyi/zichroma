@@ -25,10 +25,10 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, argv);
     // Create the weighted palette from the image or load the cache
 
+    // FIXME: Add caching back once fixed
     // const pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
     // defer pal.deinit(allocator);
     // try cache.writePaletteCache(allocator, &pal);
-
     const pal: palette.Palette = try palette.Palette.init(allocator, argv[1]);
     defer pal.deinit(allocator);
 
