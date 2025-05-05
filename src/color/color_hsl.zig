@@ -2,7 +2,7 @@ const std = @import("std");
 const color = @import("color.zig");
 const vecutil = @import("vector.zig");
 
-fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const l: f32 = self[2];
     if (self[1] == 0.0) {
         return @as(vecutil.Vec3, @splat(l));

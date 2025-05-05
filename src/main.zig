@@ -66,18 +66,13 @@ pub fn main() !void {
 fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const modulation_curve.ModulationCurve, light_theme: bool, allocator: std.mem.Allocator) ![]const template.TemplateValue {
     const template_colors: []template.TemplateValue = try allocator.alloc(template.TemplateValue, clusters.len);
     for (clusters, 0..) |*col, i| {
-        // FIXME: Force rgb once conversions added
-        // template_colors[i].primary_color = col.toRGB();
-        template_colors[i].primary_color = col.*;
+        template_colors[i].primary_color = col.convertTo(.rgb);
         template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
-        // FIXME: Add hsl modulation for text colors
-        // var col_neg_hsl: color.Color = col.negative().toHSL();
-        // col_neg_hsl.hsl.values[1] = 0.1;
-        // col_neg_hsl.hsl.values[2] *= if (light_theme) 0.16 else 1.88;
-        // col_neg_hsl.hsl.values[2] = std.math.clamp(col_neg_hsl.hsl.values[2], 0.0, 1.0);
-        // template_colors[i].text_color = col_neg_hsl.toRGB();
-        template_colors[i].text_color = col.*;
-        _ = light_theme;
+        var col_neg_hsl: color.Color = col.negative().convertTo(.hsl);
+        col_neg_hsl.values[1] = 0.1;
+        col_neg_hsl.values[2] *= if (light_theme) 0.16 else 1.88;
+        col_neg_hsl.values[2] = std.math.clamp(col_neg_hsl.values[2], 0.0, 1.0);
+        template_colors[i].text_color = col_neg_hsl.convertTo(.rgb);
     }
     return template_colors;
 }

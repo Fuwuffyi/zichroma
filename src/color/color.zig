@@ -7,7 +7,7 @@ const color_xyz = @import("color_xyz.zig");
 const color_lab = @import("color_lab.zig");
 const color_oklab = @import("color_oklab.zig");
 
-pub const ColorSpace = enum {
+pub const ColorSpace = enum(u3) {
     rgb,
     hsl,
     xyz,
@@ -40,7 +40,7 @@ pub const Color = struct {
     }
 
     pub fn negative(self: *const Self) Self {
-        return .{ .vtable = self.vtable, .values = self.vtable.negative(&self.values) };
+        return .{ .tag = self.tag, .vtable = self.vtable, .values = self.vtable.negative(&self.values) };
     }
 
     pub fn brightness(self: *const Self) f32 {
@@ -49,6 +49,36 @@ pub const Color = struct {
 
     pub fn dst(self: *const Self, other: *const Self) f32 {
         return self.vtable.dst(&self.values, &other.values);
+    }
+
+    pub fn convertTo(self: *const Self, target: ColorSpace) Self {
+        if (self.tag == target) return self.*;
+        const values: vecutil.Vec3 = switch (self.tag) {
+            .rgb => switch (target) {
+                .hsl => color_rgb.toHSL(&self.values),
+                .xyz => color_rgb.toXYZ(&self.values),
+                .oklab => color_rgb.toOKLab(&self.values),
+                else => self.convertTo(.xyz).convertTo(target).values,
+            },
+            .hsl => switch (target) {
+                .rgb => color_hsl.toRGB(&self.values),
+                else => self.convertTo(.rgb).convertTo(target).values,
+            },
+            .xyz => switch (target) {
+                .rgb => color_xyz.toRGB(&self.values),
+                .lab => color_xyz.toLAB(&self.values),
+                else => self.convertTo(.rgb).convertTo(target).values,
+            },
+            .lab => switch (target) {
+                .xyz => color_lab.toXYZ(&self.values),
+                else => self.convertTo(.xyz).convertTo(target).values,
+            },
+            .oklab => switch (target) {
+                .rgb => color_oklab.toRGB(&self.values),
+                else => self.convertTo(.rgb).convertTo(target).values,
+            },
+        };
+        return init(target, values);
     }
 };
 

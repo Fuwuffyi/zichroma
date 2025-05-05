@@ -3,7 +3,7 @@ const vecutil = @import("vector.zig");
 
 const color_xyz = @import("color_xyz.zig");
 
-fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
     const fy: f32 = (self[0] + 16) / 116;
     const fx: f32 = self[1] / 500 + fy;
     const fz: f32 = fy - self[2] / 200;

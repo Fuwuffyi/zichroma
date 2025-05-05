@@ -17,9 +17,9 @@ const XYZ_Coeff: struct { x: vecutil.Vec3, y: vecutil.Vec3, z: vecutil.Vec3 } = 
     .z = .{ 0.0193, 0.1192, 0.9505 },
 };
 
-fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
-    const mx: f32 = @reduce(.Max, self);
-    const mn: f32 = @reduce(.Min, self);
+pub fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
+    const mx: f32 = @reduce(.Max, self.*);
+    const mn: f32 = @reduce(.Min, self.*);
     const d: f32 = mx - mn;
     var h: f32 = 0.0;
     if (d > 1e-6) {
@@ -37,7 +37,7 @@ fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
     return .{ h, s, l };
 }
 
-fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const mask: @Vector(3, bool) = c > @as(vecutil.Vec3, @splat(SRGB_Threshold));
     const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Linear_Exp), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
@@ -48,7 +48,7 @@ fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
     };
 }
 
-fn toOKLab(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toOKLab(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const mask: @Vector(3, bool) = c > @as(vecutil.Vec3, @splat(SRGB_Threshold));
     const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Linear_Exp), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));

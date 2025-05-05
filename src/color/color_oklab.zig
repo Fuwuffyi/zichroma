@@ -4,7 +4,7 @@ const vecutil = @import("vector.zig");
 
 const color_rgb = @import("color_rgb.zig");
 
-fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const l_: f32 = c[0] + 0.3963377774 * c[1] + 0.2158037573 * c[2];
     const m_: f32 = c[0] - 0.1055613458 * c[1] - 0.0638541728 * c[2];

@@ -11,7 +11,7 @@ const RGB_Coeff: struct { r: vecutil.Vec3, g: vecutil.Vec3, b: vecutil.Vec3 } = 
     .b = .{ 0.0557, -0.2040, 1.0570 },
 };
 
-fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const v: vecutil.Vec3 = .{
         @reduce(.Add, self.* * RGB_Coeff.r),
         @reduce(.Add, self.* * RGB_Coeff.g),
@@ -22,7 +22,7 @@ fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
     return @min(@max(srgb, vecutil.ZeroVec), vecutil.OneVec);
 }
 
-fn toLAB(self: *const vecutil.Vec3) vecutil.Vec3 {
+pub fn toLAB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const r: vecutil.Vec3 = self.* / D65;
     const mask: @Vector(3, bool) = r > @as(vecutil.Vec3, @splat(0.008856));
     const f: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(r, 1.0 / 3.0), (r * @as(vecutil.Vec3, @splat(903.3)) + @as(vecutil.Vec3, @splat(16.0))) / @as(vecutil.Vec3, @splat(116.0)));
