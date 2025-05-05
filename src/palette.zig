@@ -10,8 +10,7 @@ pub const Palette = struct {
     name: []const u8,
     values: []const Value,
 
-    // pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
-    pub fn init(allocator: std.mem.Allocator, filepath: []const u8) !@This() {
+    pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
         // Load the image file
         var loaded_image = zigimg.Image.fromFilePath(allocator, filepath) catch return logError(error.FileOpenError, .{filepath});
         defer loaded_image.deinit();
@@ -47,15 +46,8 @@ pub const Palette = struct {
             const g: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 8)))) / 255.0;
             const b: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key)))) / 255.0;
             // Save to lab
-            values[i] = .{ .clr = color.Color.init(.rgb, .{ r, g, b }), .weight = entry.value_ptr.* };
-            // FIXME: Add color conversions
-            // values[i].clr = switch (colorspace) {
-            //     .rgb => clr_rgb.toRGB(),
-            //     .hsl => clr_rgb.toHSL(),
-            //     .xyz => clr_rgb.toXYZ(),
-            //     .lab => clr_rgb.toLAB(),
-            //     .oklab => clr_rgb.toOKLab(),
-            // };
+            const clr_rgb: color.Color = color.Color.init(.rgb, .{ r, g, b });
+            values[i] = .{ .clr = clr_rgb.convertTo(colorspace), .weight = entry.value_ptr.* };
         }
         // Sort colors by highest weight first
         std.mem.sort(Value, values, {}, struct {

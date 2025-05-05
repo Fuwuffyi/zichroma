@@ -29,7 +29,7 @@ pub fn main() !void {
     // const pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
     // defer pal.deinit(allocator);
     // try cache.writePaletteCache(allocator, &pal);
-    const pal: palette.Palette = try palette.Palette.init(allocator, argv[1]);
+    const pal: palette.Palette = try palette.Palette.init(allocator, argv[1], conf.color_space);
     defer pal.deinit(allocator);
 
     // Check if image is light or dark themed
