@@ -63,7 +63,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 }
             }
             // Increase accumulators
-            const color_values: [3]f32 = value.clr.values();
+            const color_values: [3]f32 = value.clr.getValues();
             sum_a[best_idx] += color_values[0] * weight;
             sum_b[best_idx] += color_values[1] * weight;
             sum_c[best_idx] += color_values[2] * weight;

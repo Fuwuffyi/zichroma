@@ -1,5 +1,6 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
+const color_rgb = @import("color/color_rgb.zig");
 const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
@@ -9,7 +10,8 @@ pub const Palette = struct {
     name: []const u8,
     values: []const Value,
 
-    pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
+    // pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
+    pub fn init(allocator: std.mem.Allocator, filepath: []const u8) !@This() {
         // Load the image file
         var loaded_image = zigimg.Image.fromFilePath(allocator, filepath) catch return logError(error.FileOpenError, .{filepath});
         defer loaded_image.deinit();
@@ -45,15 +47,15 @@ pub const Palette = struct {
             const g: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key >> 8)))) / 255.0;
             const b: f32 = @as(f32, @floatFromInt(@as(u8, @truncate(key)))) / 255.0;
             // Save to lab
-            const clr_rgb: color.Color = .{ .rgb = .{ .values = .{ r, g, b } } };
-            values[i] = .{ .clr = undefined, .weight = entry.value_ptr.* };
-            values[i].clr = switch (colorspace) {
-                .rgb => clr_rgb.toRGB(),
-                .hsl => clr_rgb.toHSL(),
-                .xyz => clr_rgb.toXYZ(),
-                .lab => clr_rgb.toLAB(),
-                .oklab => clr_rgb.toOKLab(),
-            };
+            values[i] = .{ .clr = color.Color.init(.rgb, .{ r, g, b }), .weight = entry.value_ptr.* };
+            // FIXME: Add color conversions
+            // values[i].clr = switch (colorspace) {
+            //     .rgb => clr_rgb.toRGB(),
+            //     .hsl => clr_rgb.toHSL(),
+            //     .xyz => clr_rgb.toXYZ(),
+            //     .lab => clr_rgb.toLAB(),
+            //     .oklab => clr_rgb.toOKLab(),
+            // };
         }
         // Sort colors by highest weight first
         std.mem.sort(Value, values, {}, struct {
@@ -73,7 +75,7 @@ pub const Palette = struct {
         var total: f32 = 0.0;
         var weight_sum: f32 = 0.0;
         for (self.values) |val| {
-            total += val.clr.getBrightness() * @as(f32, @floatFromInt(val.weight));
+            total += val.clr.brightness() * @as(f32, @floatFromInt(val.weight));
             weight_sum += @as(f32, @floatFromInt(val.weight));
         }
         return total / weight_sum > 0.5;

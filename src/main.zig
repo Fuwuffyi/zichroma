@@ -24,9 +24,14 @@ pub fn main() !void {
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
     // Create the weighted palette from the image or load the cache
-    const pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
+
+    // const pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
+    // defer pal.deinit(allocator);
+    // try cache.writePaletteCache(allocator, &pal);
+
+    const pal: palette.Palette = try palette.Palette.init(allocator, argv[1]);
     defer pal.deinit(allocator);
-    try cache.writePaletteCache(allocator, &pal);
+
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
     // Get clustering data
@@ -37,7 +42,7 @@ pub fn main() !void {
     // Sort clusters
     std.sort.block(color.Color, clusters, sort_ctx{ .light_mode = is_palette_light }, struct {
         pub fn lessThan(ctx: sort_ctx, a: color.Color, b: color.Color) bool {
-            return if (ctx.light_mode) a.getBrightness() > b.getBrightness() else a.getBrightness() < b.getBrightness();
+            return if (ctx.light_mode) a.brightness() > b.brightness() else a.brightness() < b.brightness();
         }
     }.lessThan);
     // Create the modulation curve for accent colors
@@ -61,7 +66,8 @@ pub fn main() !void {
 fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const modulation_curve.ModulationCurve, light_theme: bool, allocator: std.mem.Allocator) ![]const template.TemplateValue {
     const template_colors: []template.TemplateValue = try allocator.alloc(template.TemplateValue, clusters.len);
     for (clusters, 0..) |*col, i| {
-        template_colors[i].primary_color = col.toRGB();
+        // FIXME: Force rgb once conversions added
+        // template_colors[i].primary_color = col.toRGB();
         template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
         var col_neg_hsl: color.Color = col.negative().toHSL();
         col_neg_hsl.hsl.values[1] = 0.1;

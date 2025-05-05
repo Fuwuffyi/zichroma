@@ -52,9 +52,9 @@ const xyzVTable: color.ColorVTable = .{
     .dst = &dst,
 };
 
-pub fn init() color.Color {
+pub fn init(values: [3]f32) color.Color {
     return .{
         .vtable = xyzVTable,
-        .values = vecutil.Vec3{ 0, 0, 0 },
+        .values = values,
     };
 }

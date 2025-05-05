@@ -1,6 +1,12 @@
 const std = @import("std");
 const vecutil = @import("vector.zig");
 
+const color_rgb = @import("color_rgb.zig");
+const color_hsl = @import("color_hsl.zig");
+const color_xyz = @import("color_xyz.zig");
+const color_lab = @import("color_lab.zig");
+const color_oklab = @import("color_oklab.zig");
+
 pub const ColorSpace = enum {
     rgb,
     hsl,
@@ -22,7 +28,17 @@ pub const Color = struct {
     vtable: ColorVTable,
     values: vecutil.Vec3,
 
-    pub fn setValues(self: *const Self, val: [3]f32) void {
+    pub fn init(color_space: ColorSpace, values: [3]f32) Color {
+        return switch (color_space) {
+            .rgb => color_rgb.init(values),
+            .hsl => color_hsl.init(values),
+            .xyz => color_xyz.init(values),
+            .lab => color_lab.init(values),
+            .oklab => color_oklab.init(values),
+        };
+    }
+
+    pub fn setValues(self: *Self, val: [3]f32) void {
         self.values = val;
     }
 

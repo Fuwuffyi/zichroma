@@ -41,9 +41,9 @@ const oklabVTable: color.ColorVTable = .{
     .dst = &dst,
 };
 
-pub fn init() color.Color {
+pub fn init(values: [3]f32) color.Color {
     return .{
         .vtable = oklabVTable,
-        .values = vecutil.Vec3{ 0, 0, 0 },
+        .values = values,
     };
 }
