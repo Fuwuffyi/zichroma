@@ -85,6 +85,7 @@ const rgbVTable: color.ColorVTable = .{
 
 pub fn init(values: [3]f32) color.Color {
     return .{
+        .tag = .rgb,
         .vtable = rgbVTable,
         .values = values,
     };

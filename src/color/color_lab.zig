@@ -38,6 +38,7 @@ const labVTable: color.ColorVTable = .{
 
 pub fn init(values: [3]f32) color.Color {
     return .{
+        .tag = .lab,
         .vtable = labVTable,
         .values = values,
     };

@@ -25,6 +25,7 @@ pub const ColorVTable = struct {
 pub const Color = struct {
     const Self = @This();
 
+    tag: ColorSpace,
     vtable: ColorVTable,
     values: vecutil.Vec3,
 
