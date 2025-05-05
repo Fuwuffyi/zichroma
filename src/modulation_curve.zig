@@ -28,9 +28,8 @@ pub const ModulationCurve = struct {
         // };
         const converted_color = clr;
         // Extract component values as an array (e.g., [r, g, b] for RGB)
-        const components: [3]f32 = converted_color.getValues();
         for (self.curve_values.items, 0..) |mod_value, i| {
-            var modulated_components: [3]f32 = components;
+            var modulated_components: [3]f32 = converted_color.values;
             // Apply modulations to each component based on the curve
             if (mod_value.a_mod) |a| modulated_components[0] = a;
             if (mod_value.b_mod) |b| modulated_components[1] = b;

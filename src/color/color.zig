@@ -38,14 +38,6 @@ pub const Color = struct {
         };
     }
 
-    pub fn setValues(self: *Self, val: [3]f32) void {
-        self.values = val;
-    }
-
-    pub fn getValues(self: *const Self) [3]f32 {
-        return self.values;
-    }
-
     pub fn negative(self: *const Self) Self {
         return .{ .vtable = self.vtable, .values = self.vtable.negative(&self.values) };
     }

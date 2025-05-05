@@ -85,12 +85,12 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
 fn printGeneratedColors(color_values: []const template.TemplateValue) void {
     std.debug.print("Primary\t\tText\t\tAccents\n", .{});
     for (color_values) |*value| {
-        const primary_color: [3]f32 = value.primary_color.getValues();
-        const text_color: [3]f32 = value.text_color.getValues();
+        const primary_color: [3]f32 = value.primary_color.values;
+        const text_color: [3]f32 = value.text_color.values;
         std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(primary_color[0] * 255)), @as(u32, @intFromFloat(primary_color[1] * 255)), @as(u32, @intFromFloat(primary_color[2] * 255)) });
         std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(text_color[0] * 255)), @as(u32, @intFromFloat(text_color[1] * 255)), @as(u32, @intFromFloat(text_color[2] * 255)) });
         for (value.accent_colors) |*accent| {
-            const accent_color: [3]f32 = accent.getValues();
+            const accent_color: [3]f32 = accent.values;
             std.debug.print("\x1B[48;2;{};{};{}m   \x1B[0m", .{ @as(u32, @intFromFloat(accent_color[0] * 255)), @as(u32, @intFromFloat(accent_color[1] * 255)), @as(u32, @intFromFloat(accent_color[2] * 255)) });
         }
         std.debug.print("\n", .{});

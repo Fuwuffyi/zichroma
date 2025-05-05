@@ -63,10 +63,9 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 }
             }
             // Increase accumulators
-            const color_values: [3]f32 = value.clr.getValues();
-            sum_a[best_idx] += color_values[0] * weight;
-            sum_b[best_idx] += color_values[1] * weight;
-            sum_c[best_idx] += color_values[2] * weight;
+            sum_a[best_idx] += value.clr.values[0] * weight;
+            sum_b[best_idx] += value.clr.values[1] * weight;
+            sum_c[best_idx] += value.clr.values[2] * weight;
             total_weight[best_idx] += weight;
         }
         // Update centroids
@@ -80,7 +79,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 sum_c[i] / tw,
             };
             const old_col: color.Color = centroid.*;
-            centroid.setValues(new_vals);
+            centroid.values = new_vals;
             // Check for threshold for early exit
             if (old_col.dst(centroid) > iter_threshold) {
                 threshold_exit = false;
