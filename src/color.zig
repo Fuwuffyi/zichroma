@@ -13,16 +13,16 @@ const SRGB_Inv_Linear_Exp = 1.0 / SRGB_Linear_Exp;
 const SRGB_Scale = 1.055;
 const SRGB_Offset = 0.055;
 // CIE reference white
-const D65: [3]f32 = .{ 0.95047, 1.00000, 1.08883 };
+const D65: Vec3 = .{ 0.95047, 1.00000, 1.08883 };
 // Color‐distance weights
 const ColorWeightsRGB: Vec3 = .{ 0.2126, 0.7152, 0.0722 };
-// RGB → XYZ
+// RGB -> XYZ
 const XYZ_Coeff: struct { x: Vec3, y: Vec3, z: Vec3 } = .{
     .x = .{ 0.4124, 0.3576, 0.1805 },
     .y = .{ 0.2126, 0.7152, 0.0722 },
     .z = .{ 0.0193, 0.1192, 0.9505 },
 };
-// XYZ → RGB
+// XYZ -> RGB
 const RGB_Coeff: struct { r: Vec3, g: Vec3, b: Vec3 } = .{
     .r = .{  3.2406, -1.5372, -0.4986 },
     .g = .{ -0.9689,  1.8758,  0.0415 },
@@ -37,13 +37,14 @@ inline fn powVec(v: Vec3, exp: f32) Vec3 {
     };
 }
 
-pub const ColorSpace = enum { rgb, hsl, xyz, lab };
+pub const ColorSpace = enum { rgb, hsl, xyz, lab, oklab };
 
 pub const Color = union(ColorSpace) {
     rgb: ColorRGB,
     hsl: ColorHSL,
     xyz: ColorXYZ,
     lab: ColorLAB,
+    oklab: ColorOKLab,
 
     pub inline fn values(self: *const @This()) [3]f32 {
         return switch (self.*) {
@@ -63,6 +64,7 @@ pub const Color = union(ColorSpace) {
             .hsl => .{ .rgb = self.hsl.toRGB() },
             .xyz => .{ .rgb = self.xyz.toRGB() },
             .lab => .{ .rgb = self.lab.toXYZ().toRGB() },
+            .oklab => .{ .rgb = self.oklab.toRGB() },
         };
     }
 
@@ -72,6 +74,7 @@ pub const Color = union(ColorSpace) {
             .hsl => .{ .hsl = self.hsl },
             .xyz => .{ .hsl = self.xyz.toRGB().toHSL() },
             .lab => .{ .hsl = self.lab.toXYZ().toRGB().toHSL() },
+            .oklab => .{ .hsl = self.oklab.toRGB().toHSL() },
         };
     }
 
@@ -81,6 +84,7 @@ pub const Color = union(ColorSpace) {
             .hsl => .{ .xyz = self.hsl.toRGB().toXYZ() },
             .xyz => .{ .xyz = self.xyz },
             .lab => .{ .xyz = self.lab.toXYZ() },
+            .oklab => .{ .xyz = self.oklab.toRGB().toXYZ() },
         };
     }
 
@@ -90,6 +94,17 @@ pub const Color = union(ColorSpace) {
             .hsl => .{ .lab = self.hsl.toRGB().toXYZ().toLAB() },
             .xyz => .{ .lab = self.xyz.toLAB() },
             .lab => .{ .lab = self.lab },
+            .oklab => .{ .lab = self.oklab.toRGB().toXYZ().toLAB() },
+        };
+    }
+
+    pub inline fn toOKLab(self: *const @This()) Color {
+        return switch (self.*) {
+            .rgb => .{ .oklab = self.rgb.toOKLab() },
+            .hsl => .{ .oklab = self.hsl.toRGB().toOKLab()},
+            .xyz => .{ .oklab = self.xyz.toRGB().toOKLab() },
+            .lab => .{ .oklab = self.lab.toXYZ().toRGB().toOKLab() },
+            .oklab => .{ .oklab = self.oklab },
         };
     }
 
@@ -99,6 +114,7 @@ pub const Color = union(ColorSpace) {
             .hsl => |c| .{ .hsl = c.negative() },
             .xyz => |c| .{ .xyz = c.negative() },
             .lab => |c| .{ .lab = c.negative() },
+            .oklab => |c| .{ .oklab = c.negative() },
         };
     }
 
@@ -116,12 +132,14 @@ pub const Color = union(ColorSpace) {
                 .hsl => other.toHSL(),
                 .xyz => other.toXYZ(),
                 .lab => other.toLAB(),
+                .oklab => other.toOKLab(),
             };
         return switch (self.*) {
             .rgb => self.rgb.dst(&o.rgb),
             .hsl => self.hsl.dst(&o.hsl),
             .xyz => self.xyz.dst(&o.xyz),
             .lab => self.lab.dst(&o.lab),
+            .oklab => self.oklab.dst(&o.oklab),
         };
     }
 };
@@ -160,6 +178,25 @@ const ColorRGB = struct {
             @reduce(.Add, lin * XYZ_Coeff.y),
             @reduce(.Add, lin * XYZ_Coeff.z),
         }};
+    }
+
+    fn toOKLab(self: *const @This()) ColorOKLab {
+        const c = self.values;
+        const mask: @Vector(3, bool) = c > @as(Vec3, @splat(SRGB_Threshold));
+        const lin: Vec3 = @select(f32, mask,
+            powVec((c + @as(Vec3, @splat(SRGB_Offset))) / @as(Vec3, @splat(SRGB_Scale)), SRGB_Linear_Exp),
+            c / @as(Vec3, @splat(SRGB_Linear_Factor))
+        );
+        const l: f32 = 0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2];
+        const m: f32 = 0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2];
+        const s: f32 = 0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2];
+        const l_: f32 = std.math.cbrt(l);
+        const m_: f32 = std.math.cbrt(m);
+        const s_: f32 = std.math.cbrt(s);
+        const L: f32 = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+        const a: f32 = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+        const b: f32 = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+        return .{ .values = .{ L, a, b } };
     }
 
     fn dst(self: *const @This(), other: *const ColorRGB) f32 {
@@ -300,6 +337,45 @@ const ColorLAB = struct {
     }
 };
 
+const ColorOKLab = struct {
+    values: Vec3,
+
+    fn toRGB(self: *const @This()) ColorRGB {
+        const c: Vec3 = self.values;
+        const l_: f32 = c[0] + 0.3963377774 * c[1] + 0.2158037573 * c[2];
+        const m_: f32 = c[0] - 0.1055613458 * c[1] - 0.0638541728 * c[2];
+        const s_: f32 = c[0] - 0.0894841775 * c[1] - 1.2914855480 * c[2];
+        const l: f32 = l_ * l_ * l_;
+        const m: f32 = m_ * m_ * m_;
+        const s: f32 = s_ * s_ * s_;
+        const lin: Vec3 = .{
+            4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+           -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        };
+        const mask: @Vector(3, bool) = lin > @as(Vec3, @splat(SRGB_Threshold));
+        var c_srgb: Vec3 = @select(f32, mask,
+            powVec(lin, SRGB_Inv_Linear_Exp) * @as(Vec3, @splat(SRGB_Scale)) - @as(Vec3, @splat(SRGB_Offset)),
+            lin * @as(Vec3, @splat(SRGB_Linear_Factor))
+        );
+        c_srgb = @min(@max(c_srgb, ZeroVec), OneVec);
+        return .{ .values = c_srgb };
+    }
+
+    fn dst(self: *const @This(), other: *const ColorOKLab) f32 {
+        const d: Vec3 = self.values - other.values;
+        return @reduce(.Add, d * d);
+    }
+
+    fn negative(self: ColorOKLab) ColorOKLab {
+        return .{ .values = OneVec - self.values };
+    }
+
+    fn getBrightness(self: ColorOKLab) f32 {
+        return self.values[0];
+    }
+};
+
 test "color format conversions" {
     const expectEqualSlices = std.testing.expectEqualSlices;
     // FIXME: Allow some bit of tolerance to tests, as values provided are not f32 precise lmao
@@ -343,6 +419,16 @@ test "color format conversions" {
         .{ .lab = .{ .values = .{ 0, 0, 0 } } },
         .{ .lab = .{ .values = .{ 100, 0.01, -0.01 } } },
     };
+    const colors_oklab: [8]Color = .{
+        .{ .oklab = .{ .values = .{ 0.628, 0.5625, 0.315 } } },
+        .{ .oklab = .{ .values = .{ 0.866, -0.585, 0.4475 } } },
+        .{ .oklab = .{ .values = .{ 0.452, -0.8, -0.78 } } },
+        .{ .oklab = .{ .values = .{ 0.968, -0.1775, 0.4975 } } },
+        .{ .oklab = .{ .values = .{ 0.702, 0.6875, -0.4225 } } },
+        .{ .oklab = .{ .values = .{ 0.968, -0.1775, 0.4975 } } },
+        .{ .oklab = .{ .values = .{ 0, 0, 0 } } },
+        .{ .oklab = .{ .values = .{ 1.0, 0, 0 } } },
+    };
     var failed: bool = false;
     //// TEST RGB -> OTHER
     // RGB -> HSL
@@ -362,6 +448,16 @@ test "color format conversions" {
         const b_vals: [3]f32 = colors_xyz[i].values();
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
             std.debug.print("Error RGB -> XYZ at index: {}", .{ i });
+            failed = true;
+        };
+    }
+    // RGB -> OKLAB
+    for (colors_rgb, 0..) |c_rgb, i| {
+        const color_oklab: Color = c_rgb.toOKLab();
+        const a_vals: [3]f32 = color_oklab.values();
+        const b_vals: [3]f32 = colors_oklab[i].values();
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error RGB -> OKLAB at index: {}\n", .{ i });
             failed = true;
         };
     }
@@ -405,6 +501,17 @@ test "color format conversions" {
         const b_vals: [3]f32 = colors_xyz[i].values();
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
             std.debug.print("Error LAB -> XYZ at index: {}\n", .{ i });
+            failed = true;
+        };
+    }
+    //// TEST OKLAB -> OTHER
+    // OKLAB -> RGB
+    for (colors_oklab, 0..) |c_oklab, i| {
+        const color_rgb: Color = c_oklab.toRGB();
+        const a_vals: [3]f32 = color_rgb.values();
+        const b_vals: [3]f32 = colors_rgb[i].values();
+        expectEqualSlices(f32, &a_vals, &b_vals) catch {
+            std.debug.print("Error OKLAB -> RGB at index: {}\n", .{ i });
             failed = true;
         };
     }

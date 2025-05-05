@@ -52,6 +52,7 @@ pub const Palette = struct {
                 .hsl => clr_rgb.toHSL(),
                 .xyz => clr_rgb.toXYZ(),
                 .lab => clr_rgb.toLAB(),
+                .oklab => clr_rgb.toOKLab(),
             };
         }
         // Sort colors by highest weight first

@@ -38,7 +38,7 @@ Controls global settings for color extraction and theme generation.
 | Parameter         | Description                                                                                  | Default | Valid Values                     |
 |-------------------|----------------------------------------------------------------------------------------------|---------|----------------------------------|
 | `cluster_count`   | Number of colors to extract from the wallpaper.                                              | `4`     | Integer ≥ 1                      |
-| `color_space`     | Color space used for processing the image and generating clusters.                           | `lab`   | `rgb`, `hsl`, `xyz`, `lab`       |
+| `color_space`     | Color space used for processing the image and generating clusters.                           | `oklab`   | `rgb`, `hsl`, `xyz`, `lab`, `oklab`       |
 | `profile`         | Name of the profile to use for accent color generation (matches a `[profile.*]` section).    | `base`  | Any defined profile name         |
 | `theme`           | Forces a light/dark theme or auto-detects based on the wallpaper.                            | `auto`  | `dark`, `light`, `auto`          |
 
@@ -59,6 +59,7 @@ Defines how accent colors are modulated. Multiple profiles (e.g., `[profile.vibr
    - HSL: `a` is in range \[0, 360\], while `b, c` are in range \[0, 1\]
    - XYZ: `a, b, c` are all in range \[0, 1\]
    - LAB: `a` is in range \[0, 100\], while `b, c` are in range \[-128, 128\]
+   - OKLAB: `a` is in range \[0, 1\], while `b, c` are about in the range \[-0.5, 0.5\]
 
 ---
 

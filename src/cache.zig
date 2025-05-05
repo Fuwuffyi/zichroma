@@ -128,6 +128,7 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
             .hsl => .{ .hsl = undefined },
             .xyz => .{ .xyz = undefined },
             .lab => .{ .lab = undefined },
+            .oklab => .{ .oklab = undefined },
         };
         values[i].clr.setValues(clr);
         values[i].clr = switch (colorspace) {
@@ -135,6 +136,7 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
             .hsl => values[i].clr.toHSL(),
             .xyz => values[i].clr.toXYZ(),
             .lab => values[i].clr.toLAB(),
+            .oklab => values[i].clr.toOKLab(),
         };
     }
     return .{ .name = palette_name, .values = values };

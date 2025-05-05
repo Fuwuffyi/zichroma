@@ -23,6 +23,7 @@ pub const ModulationCurve = struct {
             .hsl => clr.toHSL(),
             .xyz => clr.toXYZ(),
             .lab => clr.toLAB(),
+            .oklab => clr.toOKLab(),
         };
         // Extract component values as an array (e.g., [r, g, b] for RGB)
         const components: [3]f32 = converted_color.values();
@@ -38,6 +39,7 @@ pub const ModulationCurve = struct {
                 .hsl => color.Color{ .hsl = undefined },
                 .xyz => color.Color{ .xyz = undefined },
                 .lab => color.Color{ .lab = undefined },
+                .oklab => color.Color{ .oklab = undefined },
             };
             colors[i].setValues(modulated_components);
             // Set to RGB after modulation
