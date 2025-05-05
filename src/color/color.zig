@@ -47,8 +47,7 @@ pub const Color = struct {
     }
 
     pub fn negative(self: *const Self) Self {
-        const instance: anyopaque = self.vtable.negative(&self.values);
-        return .{ .vtable = self.vtable, .instance = instance };
+        return .{ .vtable = self.vtable, .values = self.vtable.negative(&self.values) };
     }
 
     pub fn brightness(self: *const Self) f32 {

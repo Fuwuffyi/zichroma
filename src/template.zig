@@ -87,7 +87,7 @@ fn extractColorValue(color_type: []const u8, template_value: *const TemplateValu
 }
 
 fn formatColorProperty(color_value: *const color.Color, property: []const u8, allocator: std.mem.Allocator) ![]const u8 {
-    const values: [3]f32 = color_value.values();
+    const values: [3]f32 = color_value.getValues();
     const value_bytes: [3]u8 = .{
         @as(u8, @intFromFloat(values[0] * 255)),
         @as(u8, @intFromFloat(values[1] * 255)),

@@ -68,12 +68,16 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
     for (clusters, 0..) |*col, i| {
         // FIXME: Force rgb once conversions added
         // template_colors[i].primary_color = col.toRGB();
+        template_colors[i].primary_color = col.*;
         template_colors[i].accent_colors = try color_curve.applyCurve(allocator, col);
-        var col_neg_hsl: color.Color = col.negative().toHSL();
-        col_neg_hsl.hsl.values[1] = 0.1;
-        col_neg_hsl.hsl.values[2] *= if (light_theme) 0.16 else 1.88;
-        col_neg_hsl.hsl.values[2] = std.math.clamp(col_neg_hsl.hsl.values[2], 0.0, 1.0);
-        template_colors[i].text_color = col_neg_hsl.toRGB();
+        // FIXME: Add hsl modulation for text colors
+        // var col_neg_hsl: color.Color = col.negative().toHSL();
+        // col_neg_hsl.hsl.values[1] = 0.1;
+        // col_neg_hsl.hsl.values[2] *= if (light_theme) 0.16 else 1.88;
+        // col_neg_hsl.hsl.values[2] = std.math.clamp(col_neg_hsl.hsl.values[2], 0.0, 1.0);
+        // template_colors[i].text_color = col_neg_hsl.toRGB();
+        template_colors[i].text_color = col.*;
+        _ = light_theme;
     }
     return template_colors;
 }
@@ -81,12 +85,12 @@ fn createColorsFromClusters(clusters: []const color.Color, color_curve: *const m
 fn printGeneratedColors(color_values: []const template.TemplateValue) void {
     std.debug.print("Primary\t\tText\t\tAccents\n", .{});
     for (color_values) |*value| {
-        const primary_color: [3]f32 = value.primary_color.values();
-        const text_color: [3]f32 = value.text_color.values();
+        const primary_color: [3]f32 = value.primary_color.getValues();
+        const text_color: [3]f32 = value.text_color.getValues();
         std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(primary_color[0] * 255)), @as(u32, @intFromFloat(primary_color[1] * 255)), @as(u32, @intFromFloat(primary_color[2] * 255)) });
         std.debug.print("\x1B[48;2;{};{};{}m          \x1B[0m\t", .{ @as(u32, @intFromFloat(text_color[0] * 255)), @as(u32, @intFromFloat(text_color[1] * 255)), @as(u32, @intFromFloat(text_color[2] * 255)) });
         for (value.accent_colors) |*accent| {
-            const accent_color: [3]f32 = accent.values();
+            const accent_color: [3]f32 = accent.getValues();
             std.debug.print("\x1B[48;2;{};{};{}m   \x1B[0m", .{ @as(u32, @intFromFloat(accent_color[0] * 255)), @as(u32, @intFromFloat(accent_color[1] * 255)), @as(u32, @intFromFloat(accent_color[2] * 255)) });
         }
         std.debug.print("\n", .{});
