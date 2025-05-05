@@ -1,7 +1,7 @@
 const std = @import("std");
 const config = @import("config.zig");
 const cache = @import("cache.zig");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const palette = @import("palette.zig");
 const clustering = @import("clustering.zig");
 const modulation_curve = @import("modulation_curve.zig");
@@ -86,4 +86,3 @@ fn printGeneratedColors(color_values: []const template.TemplateValue) void {
         std.debug.print("\n", .{});
     }
 }
-

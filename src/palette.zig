@@ -1,6 +1,6 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
 pub const Palette = struct {
@@ -11,7 +11,7 @@ pub const Palette = struct {
 
     pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
         // Load the image file
-        var loaded_image = zigimg.Image.fromFilePath(allocator, filepath) catch return logError(error.FileOpenError, .{ filepath });
+        var loaded_image = zigimg.Image.fromFilePath(allocator, filepath) catch return logError(error.FileOpenError, .{filepath});
         defer loaded_image.deinit();
         // Initialize hashmap to count color frequencies
         var colors_hashmap: std.AutoHashMap(u32, u32) = std.AutoHashMap(u32, u32).init(allocator);
@@ -47,7 +47,7 @@ pub const Palette = struct {
             // Save to lab
             const clr_rgb: color.Color = .{ .rgb = .{ .values = .{ r, g, b } } };
             values[i] = .{ .clr = undefined, .weight = entry.value_ptr.* };
-            values[i].clr = switch(colorspace) {
+            values[i].clr = switch (colorspace) {
                 .rgb => clr_rgb.toRGB(),
                 .hsl => clr_rgb.toHSL(),
                 .xyz => clr_rgb.toXYZ(),

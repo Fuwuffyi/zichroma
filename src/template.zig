@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
 pub const TemplateValue = struct { primary_color: color.Color, text_color: color.Color, accent_colors: []const color.Color };
@@ -18,7 +18,7 @@ pub fn applyTemplate(template_path: []const u8, out_path: []const u8, colors: []
     var pos: usize = 0;
     // Process each placeholder sequentially
     while (findNextPlaceholderStart(template_contents, pos)) |start| {
-        const end: usize = findPlaceholderEnd(template_contents, start + 2) orelse return logError(error.UnterminatedPlaceholder, .{ pos });
+        const end: usize = findPlaceholderEnd(template_contents, start + 2) orelse return logError(error.UnterminatedPlaceholder, .{pos});
         // Append content before the placeholder
         try buffer.appendSlice(template_contents[pos..start]);
         // Extract and process placeholder (e.g., "color0.pri.r")
@@ -55,16 +55,16 @@ fn processPlaceholder(placeholder: []const u8, colors: []const TemplateValue, al
     var parts = std.mem.splitScalar(u8, placeholder, '.');
     const color_spec: []const u8 = parts.first();
     const color_index: usize = try parseColorIndex(color_spec, colors.len);
-    const color_type: []const u8 = parts.next() orelse return logError(error.InvalidPlaceholderFormat, .{ placeholder });
+    const color_type: []const u8 = parts.next() orelse return logError(error.InvalidPlaceholderFormat, .{placeholder});
     const color_value: *const color.Color = try extractColorValue(color_type, &colors[color_index]);
-    const property: []const u8 = parts.next() orelse return logError(error.InvalidPlaceholderFormat, .{ placeholder });
-    if (parts.next() != null) return logError(error.InvalidPlaceholderFormat, .{ placeholder });
+    const property: []const u8 = parts.next() orelse return logError(error.InvalidPlaceholderFormat, .{placeholder});
+    if (parts.next() != null) return logError(error.InvalidPlaceholderFormat, .{placeholder});
     return try formatColorProperty(color_value, property, allocator);
 }
 
 // Extracts color index from strings like "color3"
 fn parseColorIndex(color_spec: []const u8, max_colors: usize) !usize {
-    if (!std.mem.startsWith(u8, color_spec, "color")) return logError(error.InvalidColorSpec, .{ color_spec });
+    if (!std.mem.startsWith(u8, color_spec, "color")) return logError(error.InvalidColorSpec, .{color_spec});
     const index_str: []const u8 = color_spec["color".len..];
     const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return logError(error.InvalidColorIndex, .{ index_str, color_spec });
     if (index >= max_colors) return logError(error.ColorIndexOutOfBounds, .{ index, color_spec });
@@ -78,11 +78,11 @@ fn extractColorValue(color_type: []const u8, template_value: *const TemplateValu
         return &template_value.text_color;
     } else if (std.mem.startsWith(u8, color_type, "acc")) {
         const index_str: []const u8 = color_type["acc".len..];
-        const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return logError(error.InvalidAccentIndex, .{ index_str });
-        if (index >= template_value.accent_colors.len) return logError(error.AccentIndexOutOfBounds, .{ index });
+        const index: usize = std.fmt.parseInt(usize, index_str, 10) catch return logError(error.InvalidAccentIndex, .{index_str});
+        if (index >= template_value.accent_colors.len) return logError(error.AccentIndexOutOfBounds, .{index});
         return &template_value.accent_colors[index];
     } else {
-        return logError(error.UnknownColorType, .{ color_type });
+        return logError(error.UnknownColorType, .{color_type});
     }
 }
 
@@ -110,7 +110,7 @@ fn formatColorProperty(color_value: *const color.Color, property: []const u8, al
     } else if (std.mem.eql(u8, property, "hex")) {
         return try std.fmt.allocPrint(allocator, "{x:0>2}{x:0>2}{x:0>2}", .{ value_bytes[0], value_bytes[1], value_bytes[2] });
     } else {
-        return logError(error.InvalidColorProperty, .{ property });
+        return logError(error.InvalidColorProperty, .{property});
     }
 }
 
@@ -153,6 +153,6 @@ fn runCommand(allocator: std.mem.Allocator, command: []const u8) !void {
         .Exited => |code| if (code != 0) {
             std.debug.print("The command '{s}' has exited with code {}\n", .{ command, code });
         },
-        else => return logError(error.CommandFailed, .{ command }),
+        else => return logError(error.CommandFailed, .{command}),
     }
 }

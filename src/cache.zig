@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const palette = @import("palette.zig");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
 const cache_dir_name: []const u8 = "zichroma";
@@ -61,7 +61,7 @@ pub fn writePaletteCache(allocator: std.mem.Allocator, pal: *const palette.Palet
     // Open the file
     const file: std.fs.File = std.fs.cwd().createFile(cache_file, .{ .exclusive = true }) catch |err| {
         if (err == error.PathAlreadyExists) return;
-        return logError(error.FileCreationError, .{ cache_file });
+        return logError(error.FileCreationError, .{cache_file});
     };
     defer file.close();
     // Write the palette data to the file
@@ -100,20 +100,20 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
     // Open cache file if it exists
     const file: std.fs.File = std.fs.cwd().openFile(cache_file, .{}) catch |err| {
         if (err == error.FileNotFound) return null;
-        return logError(error.FileOpenError, .{ cache_file });
+        return logError(error.FileOpenError, .{cache_file});
     };
     defer file.close();
     // Read the palette data from the file
     const buffer: []u8 = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(buffer);
-    if (buffer.len == 0) return logError(error.InvalidData, .{ cache_file });
+    if (buffer.len == 0) return logError(error.InvalidData, .{cache_file});
     // Read the color type first
     const tag: std.meta.Tag(color.Color) = @enumFromInt(buffer[0]);
     var remaining: []u8 = buffer[1..]; // Skip the tag byte
     const entry_size = @sizeOf([3]f32) + @sizeOf(u32);
     const data_length: usize = remaining.len;
     const entries: usize = data_length / entry_size;
-    if (data_length % entry_size != 0) return logError(error.InvalidData, .{ cache_file });
+    if (data_length % entry_size != 0) return logError(error.InvalidData, .{cache_file});
     const values: []palette.Palette.Value = try allocator.alloc(palette.Palette.Value, entries);
     for (0..entries) |i| {
         const clr_bytes: []const u8 = remaining[0..@sizeOf([3]f32)];

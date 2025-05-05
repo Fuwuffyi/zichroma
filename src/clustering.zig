@@ -1,6 +1,6 @@
 const std = @import("std");
 const palette = @import("palette.zig");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
 const iter_threshold: comptime_float = 1e-6;

@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 const modulation_curve = @import("modulation_curve.zig");
 const logError = @import("error.zig").logError;
 
@@ -119,7 +119,7 @@ pub const Config = struct {
 };
 
 fn parseSectionHeader(line: []const u8) !struct { type: HeaderSections, name: []const u8 } {
-    const end_idx: usize = std.mem.indexOfScalar(u8, line, ']') orelse return logError(error.InvalidSectionHeader, .{ line });
+    const end_idx: usize = std.mem.indexOfScalar(u8, line, ']') orelse return logError(error.InvalidSectionHeader, .{line});
     const section: []const u8 = std.mem.trim(u8, line[1..end_idx], " \t");
     if (std.mem.eql(u8, section, "core")) {
         return .{ .type = .core, .name = undefined };
@@ -133,7 +133,7 @@ fn parseSectionHeader(line: []const u8) !struct { type: HeaderSections, name: []
 }
 
 fn parseKeyValue(line: []const u8) !struct { key: []const u8, value: []const u8 } {
-    const eq_pos: usize = std.mem.indexOfScalar(u8, line, '=') orelse return logError(error.InvalidKeyValue, .{ line });
+    const eq_pos: usize = std.mem.indexOfScalar(u8, line, '=') orelse return logError(error.InvalidKeyValue, .{line});
     return .{
         .key = std.mem.trim(u8, line[0..eq_pos], " \t"),
         .value = std.mem.trim(u8, line[eq_pos + 1 ..], " \t"),
@@ -145,7 +145,7 @@ fn handleKeyValue(allocator: std.mem.Allocator, config: *Config, section: Header
         .core => try handleCoreSetting(allocator, config, key, value),
         .profile => try handleProfileSetting(config, section_name, key, value),
         .template => try handleTemplateSetting(allocator, config, section_name, key, value),
-        else => return logError(error.OrphanedKeyValue, .{ key }),
+        else => return logError(error.OrphanedKeyValue, .{key}),
     }
 }
 
@@ -153,31 +153,37 @@ fn handleCoreSetting(allocator: std.mem.Allocator, config: *Config, key: []const
     if (std.mem.eql(u8, key, "cluster_count")) {
         config.cluster_count = try std.fmt.parseUnsigned(u32, value, 10);
     } else if (std.mem.eql(u8, key, "color_space")) {
-        config.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return logError(error.InvalidColorSpace, .{ value });
+        config.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return logError(error.InvalidColorSpace, .{value});
     } else if (std.mem.eql(u8, key, "profile")) {
         const new_profile: []const u8 = try allocator.dupe(u8, value);
         allocator.free(config.profile);
         config.profile = new_profile;
     } else if (std.mem.eql(u8, key, "theme")) {
-        config.theme = std.meta.stringToEnum(Theme, value) orelse return logError(error.InvalidTheme, .{ value });
+        config.theme = std.meta.stringToEnum(Theme, value) orelse return logError(error.InvalidTheme, .{value});
     } else {
-        return logError(error.UnknownCoreSetting, .{ key });
+        return logError(error.UnknownCoreSetting, .{key});
     }
 }
 
 fn handleProfileSetting(config: *Config, profile_name: []const u8, key: []const u8, value: []const u8) !void {
-    const profile: *modulation_curve.ModulationCurve = config.profiles.getPtr(profile_name) orelse return logError(error.ProfileNotFound, .{ profile_name });
+    const profile: *modulation_curve.ModulationCurve = config.profiles.getPtr(profile_name) orelse return logError(error.ProfileNotFound, .{profile_name});
     if (std.mem.eql(u8, key, "color_space")) {
-        profile.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return logError(error.InvalidColorSpace, .{ value });
+        profile.color_space = std.meta.stringToEnum(color.ColorSpace, value) orelse return logError(error.InvalidColorSpace, .{value});
     } else if (std.mem.startsWith(u8, key, "color_")) {
         try profile.curve_values.append(try parseModulationValue(value));
     } else {
-        return logError(error.UnknownProfileSetting, .{ key });
+        return logError(error.UnknownProfileSetting, .{key});
     }
 }
 
-fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template_name: []const u8, key: []const u8, value: []const u8,) !void {
-    const template: *Template = config.templates.getPtr(template_name) orelse return logError(error.TemplateNotFound, .{ template_name });
+fn handleTemplateSetting(
+    allocator: std.mem.Allocator,
+    config: *Config,
+    template_name: []const u8,
+    key: []const u8,
+    value: []const u8,
+) !void {
+    const template: *Template = config.templates.getPtr(template_name) orelse return logError(error.TemplateNotFound, .{template_name});
     if (std.mem.eql(u8, key, "template_in")) {
         template.template_in = try expandPath(allocator, value);
     } else if (std.mem.eql(u8, key, "config_out")) {
@@ -185,7 +191,7 @@ fn handleTemplateSetting(allocator: std.mem.Allocator, config: *Config, template
     } else if (std.mem.eql(u8, key, "post_cmd")) {
         template.post_cmd = try allocator.dupe(u8, value);
     } else {
-        return logError(error.UnknownTemplateSetting, .{ key });
+        return logError(error.UnknownTemplateSetting, .{key});
     }
 }
 
@@ -239,12 +245,12 @@ fn parseModulationValue(s: []const u8) !modulation_curve.ModulationCurve.Value {
     var parts = std.mem.splitScalar(u8, trimmed, ',');
     var values: [3]?f32 = .{ null, null, null };
     for (&values) |*val| {
-        const part: []const u8 = parts.next() orelse return logError(error.TooFewModulationValues, .{ s });
+        const part: []const u8 = parts.next() orelse return logError(error.TooFewModulationValues, .{s});
         const val_str: []const u8 = std.mem.trim(u8, part, " \t");
         if (val_str.len == 0) continue;
         val.* = if (std.mem.eql(u8, val_str, "null")) null else try std.fmt.parseFloat(f32, val_str);
     }
-    if (parts.next() != null) return logError(error.TooManyModulationValues, .{ s });
+    if (parts.next() != null) return logError(error.TooManyModulationValues, .{s});
     return .{ .a_mod = values[0], .b_mod = values[1], .c_mod = values[2] };
 }
 

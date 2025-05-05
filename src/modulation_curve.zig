@@ -1,5 +1,5 @@
 const std = @import("std");
-const color = @import("color.zig");
+const color = @import("color/color.zig");
 
 pub const ModulationCurve = struct {
     curve_values: std.ArrayList(Value),
