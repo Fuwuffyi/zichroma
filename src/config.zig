@@ -162,6 +162,8 @@ fn handleCoreSetting(allocator: std.mem.Allocator, config: *Config, key: []const
         config.profile = new_profile;
     } else if (std.mem.eql(u8, key, "theme")) {
         config.theme = std.meta.stringToEnum(Theme, value) orelse return logError(error.InvalidTheme, .{value});
+    } else if (std.mem.eql(u8, key, "exponential_mapping")) {
+        config.weight_exponent = try std.fmt.parseFloat(f32, value);
     } else {
         return logError(error.UnknownCoreSetting, .{key});
     }

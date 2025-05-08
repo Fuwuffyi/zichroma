@@ -67,6 +67,7 @@ pub const Palette = struct {
     }
 
     pub fn map_weights_exponential(self: *@This(), alpha: f32) void {
+        if (alpha == 0.0) return;
         for (self.values) |*value| value.*.weight = (1 - @exp(-alpha * value.weight)) / (1 - @exp(-alpha));
     }
 

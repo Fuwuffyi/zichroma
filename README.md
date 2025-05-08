@@ -40,6 +40,7 @@ Controls global settings for color extraction and theme generation.
 | `cluster_count`   | Number of colors to extract from the wallpaper.                                              | `4`     | Integer ≥ 1                      |
 | `color_space`     | Color space used for processing the image and generating clusters.                           | `oklab`   | `rgb`, `hsl`, `xyz`, `lab`, `oklab`       |
 | `profile`         | Name of the profile to use for accent color generation (matches a `[profile.*]` section).    | `base`  | Any defined profile name         |
+| `exponential_mapping`           | Changes how the clustering algorithm sees color. (Positive values will treat less present colors as more present. Opposite is true for Negative values).                            | 0.0  | f32          |
 | `theme`           | Forces a light/dark theme or auto-detects based on the wallpaper.                            | `auto`  | `dark`, `light`, `auto`          |
 
 ---
