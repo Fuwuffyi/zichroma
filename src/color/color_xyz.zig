@@ -22,7 +22,7 @@ pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
         @reduce(.Add, self.* * RGB_Coeff.g),
         @reduce(.Add, self.* * RGB_Coeff.b),
     };
-    const mask: @Vector(3, bool) = v > @as(vecutil.Vec3, @splat(0.0031308));
+    const mask: @Vector(3, bool) = v > @as(vecutil.Vec3, @splat(color_rgb.SRGB_Inv_Threshold));
     const srgb: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(v, color_rgb.SRGB_Inv_Gamma) * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Scale)) - @as(vecutil.Vec3, @splat(color_rgb.SRGB_Offset)), v * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Linear_Factor)));
     return @min(@max(srgb, vecutil.ZeroVec), vecutil.OneVec);
 }

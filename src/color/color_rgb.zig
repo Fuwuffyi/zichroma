@@ -5,6 +5,7 @@ const vecutil = @import("vector.zig");
 const ColorWeightsRGB: vecutil.Vec3 = .{ 0.2126, 0.7152, 0.0722 };
 
 pub const SRGB_Threshold: f32 = 0.04045;
+pub const SRGB_Inv_Threshold: f32 = 0.0031308; 
 pub const SRGB_Linear_Factor: f32 = 12.92;
 pub const SRGB_Gamma: f32 = 2.4;
 pub const SRGB_Inv_Gamma: f32 = 1.0 / SRGB_Gamma;
@@ -54,16 +55,17 @@ pub fn toOKLab(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const mask: @Vector(3, bool) = c > @as(vecutil.Vec3, @splat(SRGB_Threshold));
     const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Gamma), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
-    const l: f32 = 0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2];
-    const m: f32 = 0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2];
-    const s: f32 = 0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2];
-    const l_: f32 = std.math.cbrt(l);
-    const m_: f32 = std.math.cbrt(m);
-    const s_: f32 = std.math.cbrt(s);
-    const L: f32 = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
-    const a: f32 = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
-    const b: f32 = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
-    return .{ L, a, b };
+    const L_: f32 = 0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2];
+    const M_: f32 = 0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2];
+    const S_: f32 = 0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2];
+    const l: f32 = std.math.cbrt(L_);
+    const m: f32 = std.math.cbrt(M_);
+    const s: f32 = std.math.cbrt(S_);
+    return .{
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    };
 }
 
 fn negative(self: *const vecutil.Vec3) vecutil.Vec3 {
