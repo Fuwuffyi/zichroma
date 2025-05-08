@@ -21,19 +21,21 @@ pub fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
     const mx: f32 = @reduce(.Max, self.*);
     const mn: f32 = @reduce(.Min, self.*);
     const d: f32 = mx - mn;
-    var h: f32 = 0.0;
-    if (d > 1e-6) {
-        if (mx == self[0]) {
-            h = ((self[1] - self[2]) / d) * 60.0;
-        } else if (mx == self[1]) {
-            h = ((self[2] - self[0]) / d + 2.0) * 60.0;
-        } else {
-            h = ((self[0] - self[1]) / d + 4.0) * 60.0;
-        }
-    }
-    h = @mod(h, 360.0);
     const l: f32 = (mx + mn) * 0.5;
-    const s: f32 = if (d < 1e-6) 0.0 else d / (1.0 - @abs(2.0 * l - 1.0));
+    var h: f32 = 0.0;
+    const s: f32 = if (d <= 0.0) 0.0 else d / (1.0 - @abs(2.0 * l - 1.0));
+    if (d > 0.0) {
+        const inv_d: f32 = 1.0 / d;
+        if (mx == self[0]) {
+            h = @mod((self[1] - self[2]) * inv_d, 6.0);
+        } else if (mx == self[1]) {
+            h = ((self[2] - self[0]) * inv_d) + 2.0;
+        } else {
+            h = ((self[0] - self[1]) * inv_d) + 4.0;
+        }
+        h *= 60.0;
+        if (h < 0.0) h += 360.0;
+    }
     return .{ h, s, l };
 }
 

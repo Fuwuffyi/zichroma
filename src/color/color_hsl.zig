@@ -12,12 +12,12 @@ pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const x: f32 = c * (1.0 - @abs(@mod(hp, 2.0) - 1.0));
     const m: f32 = l - c * 0.5;
     const rgb: vecutil.Vec3 = switch (@mod(@as(u8, @intFromFloat(hp)), 6)) {
-        0 => vecutil.Vec3{ c, x, 0 },
-        1 => vecutil.Vec3{ x, c, 0 },
-        2 => vecutil.Vec3{ 0, c, x },
-        3 => vecutil.Vec3{ 0, x, c },
-        4 => vecutil.Vec3{ x, 0, c },
-        5 => vecutil.Vec3{ c, 0, x },
+        0 => .{ c, x, 0 },
+        1 => .{ x, c, 0 },
+        2 => .{ 0, c, x },
+        3 => .{ 0, x, c },
+        4 => .{ x, 0, c },
+        5 => .{ c, 0, x },
         else => unreachable,
     } + @as(vecutil.Vec3, @splat(m));
     return @min(@max(rgb, vecutil.ZeroVec), vecutil.OneVec);
