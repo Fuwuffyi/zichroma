@@ -1,6 +1,7 @@
 const std = @import("std");
 const palette = @import("palette.zig");
 const color = @import("color/color.zig");
+const vecutil = @import("color/vector.zig");
 const logError = @import("error.zig").logError;
 
 const iter_threshold: comptime_float = 1e-6;
@@ -34,20 +35,14 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
         centroid.* = best_color.*;
     }
     // Preallocate accumulators
-    var sum_a: []f32 = try allocator.alloc(f32, k_usize);
-    defer allocator.free(sum_a);
-    var sum_b: []f32 = try allocator.alloc(f32, k_usize);
-    defer allocator.free(sum_b);
-    var sum_c: []f32 = try allocator.alloc(f32, k_usize);
-    defer allocator.free(sum_c);
+    var sum: []vecutil.Vec3 = try allocator.alloc(vecutil.Vec3, k_usize);
+    defer allocator.free(sum);
     var total_weight: []f32 = try allocator.alloc(f32, k_usize);
     defer allocator.free(total_weight);
     // Create array to store the cluster the color appartains to
     for (0..iters) |_| {
         // Reset accumulators
-        @memset(sum_a, 0.0);
-        @memset(sum_b, 0.0);
-        @memset(sum_c, 0.0);
+        @memset(sum, vecutil.ZeroVec);
         @memset(total_weight, 0.0);
         // Loop through palette
         for (pal.values) |value| {
@@ -63,9 +58,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 }
             }
             // Increase accumulators
-            sum_a[best_idx] += value.clr.values[0] * weight;
-            sum_b[best_idx] += value.clr.values[1] * weight;
-            sum_c[best_idx] += value.clr.values[2] * weight;
+            sum[best_idx] += value.clr.values * @as(vecutil.Vec3, @splat(weight));
             total_weight[best_idx] += weight;
         }
         // Update centroids
@@ -73,13 +66,8 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
         for (centroids, 0..) |*centroid, i| {
             const tw: f32 = total_weight[i];
             if (tw == 0) continue;
-            const new_vals: [3]f32 = .{
-                sum_a[i] / tw,
-                sum_b[i] / tw,
-                sum_c[i] / tw,
-            };
             const old_col: color.Color = centroid.*;
-            centroid.values = new_vals;
+            centroid.values = sum[i] / @as(vecutil.Vec3, @splat(tw));
             // Check for threshold for early exit
             if (old_col.dst(centroid) > iter_threshold) {
                 threshold_exit = false;
