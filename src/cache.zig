@@ -66,7 +66,7 @@ pub fn writePaletteCache(allocator: std.mem.Allocator, pal: *const palette.Palet
     defer file.close();
     // Write the palette data to the file
     const entries: usize = pal.values.len;
-    const bytes_per_entry: usize = 3 * @sizeOf(f32) + @sizeOf(u32); // 3 color parts + 1 weight
+    const bytes_per_entry: usize = 3 * @sizeOf(f32) + @sizeOf(f32); // 3 color parts + 1 weight
     const total_bytes: usize = entries * bytes_per_entry;
     const buffer: []u8 = try allocator.alloc(u8, total_bytes);
     defer allocator.free(buffer);
@@ -104,20 +104,17 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
     defer allocator.free(buffer);
     if (buffer.len == 0) return logError(error.InvalidData, .{cache_file});
     var remaining: []u8 = buffer[0..];
-    const entry_size = @sizeOf([3]f32) + @sizeOf(u32);
+    const entry_size = @sizeOf([3]f32) + @sizeOf(f32);
     const data_length: usize = remaining.len;
     const entries: usize = data_length / entry_size;
     if (data_length % entry_size != 0) return logError(error.InvalidData, .{cache_file});
     const values: []palette.Palette.Value = try allocator.alloc(palette.Palette.Value, entries);
     for (0..entries) |i| {
-        const clr_bytes: []const u8 = remaining[0..@sizeOf([3]f32)];
-        const clr: [3]f32 = std.mem.bytesToValue([3]f32, clr_bytes);
-        remaining = remaining[@sizeOf([3]f32)..];
-        const weight_bytes: []const u8 = remaining[0..@sizeOf(u32)];
-        const weight: u32 = std.mem.bytesToValue(u32, weight_bytes);
-        remaining = remaining[@sizeOf(u32)..];
-        values[i].weight = weight;
-        values[i].clr = color.Color.init(.rgb, clr).convertTo(colorspace);
+        const bytes: []const u8 = remaining[0..@sizeOf([4]f32)];
+        const float_vals: [4]f32 = std.mem.bytesToValue([4]f32, bytes);
+        remaining = remaining[@sizeOf([4]f32)..];
+        values[i].weight = float_vals[3];
+        values[i].clr = color.Color.init(.rgb, float_vals[0..3].*).convertTo(colorspace);
     }
     return .{ .name = palette_name, .values = values };
 }

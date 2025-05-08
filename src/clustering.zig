@@ -26,7 +26,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 min_dst = @min(min_dst, other.dst(&val.clr));
             }
             if (min_dst < 1e-5) continue;
-            const score = min_dst * @as(f32, @floatFromInt(val.weight));
+            const score = min_dst * val.weight;
             if (score > best_score) {
                 best_score = score;
                 best_color = &val.clr;
@@ -49,7 +49,6 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
             // Update cluster values based on closest one to cluster center
             var best_idx: usize = 0;
             var min_dist: f32 = std.math.floatMax(f32);
-            const weight: f32 = @as(f32, @floatFromInt(value.weight));
             for (centroids, 0..) |*centroid, idx| {
                 const dist_sq: f32 = value.clr.dst(centroid);
                 if (dist_sq < min_dist) {
@@ -58,8 +57,8 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
                 }
             }
             // Increase accumulators
-            sum[best_idx] += value.clr.values * @as(vecutil.Vec3, @splat(weight));
-            total_weight[best_idx] += weight;
+            sum[best_idx] += value.clr.values * @as(vecutil.Vec3, @splat(value.weight));
+            total_weight[best_idx] += value.weight;
         }
         // Update centroids
         var threshold_exit: bool = true;

@@ -5,7 +5,7 @@ const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
 pub const Palette = struct {
-    pub const Value = struct { clr: color.Color, weight: u32 };
+    pub const Value = struct { clr: color.Color, weight: f32 };
 
     name: []const u8,
     values: []const Value,
@@ -15,7 +15,7 @@ pub const Palette = struct {
         var loaded_image = zigimg.Image.fromFilePath(allocator, filepath) catch return logError(error.FileOpenError, .{filepath});
         defer loaded_image.deinit();
         // Initialize hashmap to count color frequencies
-        var colors_hashmap: std.AutoHashMap(u32, u32) = std.AutoHashMap(u32, u32).init(allocator);
+        var colors_hashmap: std.AutoHashMap(u32, f32) = std.AutoHashMap(u32, f32).init(allocator);
         defer colors_hashmap.deinit();
         try colors_hashmap.ensureTotalCapacity(@as(u32, @intCast(loaded_image.width * loaded_image.height)));
         // Loop over the image's pixels and count the occurrences of each color
@@ -29,9 +29,9 @@ pub const Palette = struct {
             const key: u32 = (@as(u32, r) << 16) | (@as(u32, g) << 8) | b;
             const gop = try colors_hashmap.getOrPut(key);
             if (gop.found_existing) {
-                gop.value_ptr.* += 1;
+                gop.value_ptr.* += 1.0;
             } else {
-                gop.value_ptr.* = 1;
+                gop.value_ptr.* = 1.0;
             }
         }
         // Directly allocate the result slice with precise sizing
@@ -49,6 +49,7 @@ pub const Palette = struct {
             const clr_rgb: color.Color = color.Color.init(.rgb, .{ r, g, b });
             values[i] = .{ .clr = clr_rgb.convertTo(colorspace), .weight = entry.value_ptr.* };
         }
+        normalize_values(values);
         // Sort colors by highest weight first
         std.mem.sort(Value, values, {}, struct {
             fn lessThan(_: void, a: Value, b: Value) bool {
@@ -59,6 +60,12 @@ pub const Palette = struct {
         return .{ .name = std.fs.path.basename(filepath), .values = values };
     }
 
+    fn normalize_values(values: []Value) void {
+        var sum: f32 = 0;
+        for (values) |*value| sum += value.weight;
+        for (values) |*value| value.weight /= sum;
+    }
+
     pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.values);
     }
@@ -67,8 +74,8 @@ pub const Palette = struct {
         var total: f32 = 0.0;
         var weight_sum: f32 = 0.0;
         for (self.values) |val| {
-            total += val.clr.brightness() * @as(f32, @floatFromInt(val.weight));
-            weight_sum += @as(f32, @floatFromInt(val.weight));
+            total += val.clr.brightness() * val.weight;
+            weight_sum += val.weight;
         }
         return total / weight_sum > 0.5;
     }

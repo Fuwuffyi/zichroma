@@ -1,7 +1,7 @@
 .{
     .name = .zichroma,
     .fingerprint = 0x9e5ba517cdd471c,
-    .version = "1.4.0",
+    .version = "1.4.1",
     .dependencies = .{
         .zigimg = .{
             // Use fork of zigim for 1.14.0 support
