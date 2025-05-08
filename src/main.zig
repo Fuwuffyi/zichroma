@@ -24,9 +24,10 @@ pub fn main() !void {
     const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, argv);
     // Create the weighted palette from the image or load the cache
-    const pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
+    var pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
     defer pal.deinit(allocator);
     try cache.writePaletteCache(allocator, &pal);
+    pal.map_weights_exponential(25.0);
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
     // Get clustering data
