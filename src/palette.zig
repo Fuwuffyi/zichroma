@@ -8,7 +8,7 @@ pub const Palette = struct {
     pub const Value = struct { clr: color.Color, weight: f32 };
 
     name: []const u8,
-    values: []const Value,
+    values: []Value,
 
     pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
         // Load the image file
@@ -49,21 +49,25 @@ pub const Palette = struct {
             const clr_rgb: color.Color = color.Color.init(.rgb, .{ r, g, b });
             values[i] = .{ .clr = clr_rgb.convertTo(colorspace), .weight = entry.value_ptr.* };
         }
-        normalize_values(values);
         // Sort colors by highest weight first
         std.mem.sort(Value, values, {}, struct {
             fn lessThan(_: void, a: Value, b: Value) bool {
                 return a.weight > b.weight;
             }
         }.lessThan);
+        // Normalize weights based on max weight
+        max_weight_normalization(values);
         // Return new palette
         return .{ .name = std.fs.path.basename(filepath), .values = values };
     }
 
-    fn normalize_values(values: []Value) void {
-        var sum: f32 = 0;
-        for (values) |*value| sum += value.weight;
-        for (values) |*value| value.weight /= sum;
+    fn max_weight_normalization(values: []Value) void {
+        const max: f32 = values[0].weight;
+        for (values) |*value| value.weight /= max;
+    }
+
+    pub fn map_weights_exponential(self: *@This(), alpha: f32) void {
+        for (self.values) |*value| value.*.weight = (1 - @exp(-alpha * value.weight)) / (1 - @exp(-alpha));
     }
 
     pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {

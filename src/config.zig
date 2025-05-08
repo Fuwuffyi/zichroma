@@ -19,6 +19,7 @@ const Template = struct {
 
 pub const Config = struct {
     cluster_count: u32,
+    weight_exponent: f32,
     color_space: color.ColorSpace,
     profile: []const u8,
     theme: Theme,
@@ -29,6 +30,7 @@ pub const Config = struct {
         // Create default configuration
         var config: Config = .{
             .cluster_count = 4,
+            .weight_exponent = 1.0,
             .color_space = .lab,
             .profile = try allocator.dupe(u8, "base"),
             .theme = .auto,

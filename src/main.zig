@@ -27,7 +27,7 @@ pub fn main() !void {
     var pal: palette.Palette = try cache.readPaletteCache(allocator, argv[1], conf.color_space) orelse try palette.Palette.init(allocator, argv[1], conf.color_space);
     defer pal.deinit(allocator);
     try cache.writePaletteCache(allocator, &pal);
-    pal.map_weights_exponential(25.0);
+    pal.map_weights_exponential(conf.weight_exponent);
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
     // Get clustering data
