@@ -144,7 +144,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = hsl_clr.values;
         const b_vals: [3]f32 = colors_hsl[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error RGB -> HSL at index: {}", .{i});
+            std.debug.print("Error RGB -> HSL at index: {}\n", .{i});
             failed = true;
         };
     }
@@ -154,7 +154,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = xyz_clr.values;
         const b_vals: [3]f32 = colors_xyz[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error RGB -> XYZ at index: {}", .{i});
+            std.debug.print("Error RGB -> XYZ at index: {}\n", .{i});
             failed = true;
         };
     }
@@ -164,7 +164,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = oklab_clr.values;
         const b_vals: [3]f32 = colors_oklab[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error RGB -> OKLAB at index: {}\n", .{i});
+            std.debug.print("Error RGB -> OKLAB at index: {}\n\n", .{i});
             failed = true;
         };
     }
@@ -175,7 +175,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = rgb_clr.values;
         const b_vals: [3]f32 = colors_rgb[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error HSL -> RGB at index: {}", .{i});
+            std.debug.print("Error HSL -> RGB at index: {}\n", .{i});
             failed = true;
         };
     }
@@ -186,7 +186,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = rgb_clr.values;
         const b_vals: [3]f32 = colors_rgb[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error XYZ -> RGB at index: {}", .{i});
+            std.debug.print("Error XYZ -> RGB at index: {}\n", .{i});
             failed = true;
         };
     }
@@ -196,7 +196,7 @@ test "color format conversions" {
         const a_vals: [3]f32 = lab_clr.values;
         const b_vals: [3]f32 = colors_lab[i].values;
         expectEqualSlices(f32, &a_vals, &b_vals) catch {
-            std.debug.print("Error XYZ -> LAB at index: {}", .{i});
+            std.debug.print("Error XYZ -> LAB at index: {}\n", .{i});
             failed = true;
         };
     }

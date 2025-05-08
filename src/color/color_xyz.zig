@@ -6,9 +6,9 @@ const color_rgb = @import("color_rgb.zig");
 pub const D65: vecutil.Vec3 = .{ 0.95047, 1.00000, 1.08883 };
 
 const RGB_Coeff: struct { r: vecutil.Vec3, g: vecutil.Vec3, b: vecutil.Vec3 } = .{
-    .r = .{ 3.2406, -1.5372, -0.4986 },
-    .g = .{ -0.9689, 1.8758, 0.0415 },
-    .b = .{ 0.0557, -0.2040, 1.0570 },
+    .r = .{ 3.2404542, -1.5371385, -0.4985314 },
+    .g = .{ -0.9692660, 1.8760108, 0.0415560 },
+    .b = .{ 0.0556434, -0.2040259, 1.0572252 },
 };
 
 pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
@@ -18,7 +18,7 @@ pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
         @reduce(.Add, self.* * RGB_Coeff.b),
     };
     const mask: @Vector(3, bool) = v > @as(vecutil.Vec3, @splat(0.0031308));
-    const srgb: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(v, color_rgb.SRGB_Inv_Linear_Exp) * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Scale)) - @as(vecutil.Vec3, @splat(color_rgb.SRGB_Offset)), v * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Linear_Factor)));
+    const srgb: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(v, color_rgb.SRGB_Inv_Gamma) * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Scale)) - @as(vecutil.Vec3, @splat(color_rgb.SRGB_Offset)), v * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Linear_Factor)));
     return @min(@max(srgb, vecutil.ZeroVec), vecutil.OneVec);
 }
 

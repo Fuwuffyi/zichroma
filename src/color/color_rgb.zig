@@ -6,15 +6,15 @@ const ColorWeightsRGB: vecutil.Vec3 = .{ 0.2126, 0.7152, 0.0722 };
 
 pub const SRGB_Threshold: f32 = 0.04045;
 pub const SRGB_Linear_Factor: f32 = 12.92;
-pub const SRGB_Linear_Exp: f32 = 2.4;
-pub const SRGB_Inv_Linear_Exp: f32 = 1.0 / SRGB_Linear_Exp;
+pub const SRGB_Gamma: f32 = 2.4;
+pub const SRGB_Inv_Gamma: f32 = 1.0 / SRGB_Gamma;
 pub const SRGB_Scale: f32 = 1.055;
 pub const SRGB_Offset: f32 = 0.055;
 
 const XYZ_Coeff: struct { x: vecutil.Vec3, y: vecutil.Vec3, z: vecutil.Vec3 } = .{
-    .x = .{ 0.4124, 0.3576, 0.1805 },
-    .y = .{ 0.2126, 0.7152, 0.0722 },
-    .z = .{ 0.0193, 0.1192, 0.9505 },
+    .x = .{ 0.4124564, 0.3575761, 0.1804375 },
+    .y = .{ 0.2126720, 0.7151522, 0.0721750 },
+    .z = .{ 0.0193339, 0.1191920, 0.9503041 },
 };
 
 pub fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
@@ -42,7 +42,7 @@ pub fn toHSL(self: *const vecutil.Vec3) vecutil.Vec3 {
 pub fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const mask: @Vector(3, bool) = c > @as(vecutil.Vec3, @splat(SRGB_Threshold));
-    const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Linear_Exp), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
+    const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Gamma), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
     return .{
         @reduce(.Add, lin * XYZ_Coeff.x),
         @reduce(.Add, lin * XYZ_Coeff.y),
@@ -53,7 +53,7 @@ pub fn toXYZ(self: *const vecutil.Vec3) vecutil.Vec3 {
 pub fn toOKLab(self: *const vecutil.Vec3) vecutil.Vec3 {
     const c: vecutil.Vec3 = self.*;
     const mask: @Vector(3, bool) = c > @as(vecutil.Vec3, @splat(SRGB_Threshold));
-    const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Linear_Exp), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
+    const lin: vecutil.Vec3 = @select(f32, mask, vecutil.powVec((c + @as(vecutil.Vec3, @splat(SRGB_Offset))) / @as(vecutil.Vec3, @splat(SRGB_Scale)), SRGB_Gamma), c / @as(vecutil.Vec3, @splat(SRGB_Linear_Factor)));
     const l: f32 = 0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2];
     const m: f32 = 0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2];
     const s: f32 = 0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2];

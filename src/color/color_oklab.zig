@@ -18,7 +18,7 @@ pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
         -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
     };
     const mask: @Vector(3, bool) = lin > @as(vecutil.Vec3, @splat(color_rgb.SRGB_Threshold));
-    const c_srgb: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(lin, color_rgb.SRGB_Inv_Linear_Exp) * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Scale)) - @as(vecutil.Vec3, @splat(color_rgb.SRGB_Offset)), lin * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Linear_Factor)));
+    const c_srgb: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(lin, color_rgb.SRGB_Inv_Gamma) * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Scale)) - @as(vecutil.Vec3, @splat(color_rgb.SRGB_Offset)), lin * @as(vecutil.Vec3, @splat(color_rgb.SRGB_Linear_Factor)));
     return @min(@max(c_srgb, vecutil.ZeroVec), vecutil.OneVec);
 }
 
