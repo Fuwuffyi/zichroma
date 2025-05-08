@@ -3,7 +3,12 @@ const vecutil = @import("vector.zig");
 
 const color_rgb = @import("color_rgb.zig");
 
-pub const D65: vecutil.Vec3 = .{ 0.95047, 1.00000, 1.08883 };
+pub const D65: vecutil.Vec3 = .{ 95.0489, 100.0, 108.8840 };
+pub const DELTA: f32 = 6.0 / 29.0;
+pub const DELTA_CUBED: f32 = DELTA * DELTA * DELTA;
+pub const INV_3_DELTA_SQR: f32 = 1.0 / (3.0 * DELTA * DELTA);
+pub const INV_KAPPA: f32 = 16.0 / 116.0;
+pub const KAPPA: f32 = 24389.0 / 27.0;
 
 const RGB_Coeff: struct { r: vecutil.Vec3, g: vecutil.Vec3, b: vecutil.Vec3 } = .{
     .r = .{ 3.2404542, -1.5371385, -0.4985314 },
@@ -24,8 +29,8 @@ pub fn toRGB(self: *const vecutil.Vec3) vecutil.Vec3 {
 
 pub fn toLAB(self: *const vecutil.Vec3) vecutil.Vec3 {
     const r: vecutil.Vec3 = self.* / D65;
-    const mask: @Vector(3, bool) = r > @as(vecutil.Vec3, @splat(0.008856));
-    const f: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(r, 1.0 / 3.0), (r * @as(vecutil.Vec3, @splat(903.3)) + @as(vecutil.Vec3, @splat(16.0))) / @as(vecutil.Vec3, @splat(116.0)));
+    const mask: @Vector(3, bool) = r > @as(vecutil.Vec3, @splat(DELTA_CUBED));
+    const f: vecutil.Vec3 = @select(f32, mask, vecutil.powVec(r, 1.0 / 3.0), (r * @as(vecutil.Vec3, @splat(INV_3_DELTA_SQR)) + @as(vecutil.Vec3, @splat(INV_KAPPA))));
     return .{
         116.0 * f[1] - 16.0,
         500.0 * (f[0] - f[1]),
