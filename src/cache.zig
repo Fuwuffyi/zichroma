@@ -103,7 +103,6 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
     const buffer: []u8 = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(buffer);
     if (buffer.len == 0) return logError(error.InvalidData, .{cache_file});
-    // Read the color type first
     var remaining: []u8 = buffer[0..];
     const entry_size = @sizeOf([3]f32) + @sizeOf(u32);
     const data_length: usize = remaining.len;
