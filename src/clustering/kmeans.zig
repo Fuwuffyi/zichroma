@@ -6,21 +6,21 @@ const logError = @import("../error.zig").logError;
 
 const iter_threshold: comptime_float = 1e-6;
 
-pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32, iters: u32) ![]color.Color {
+pub fn kmeans(allocator: std.mem.Allocator, pal: []const palette.ImgValue, k: u32, iters: u32) ![]color.Color {
     // Error checking
     const k_usize: usize = @intCast(k);
-    if (pal.values.len == 0) return logError(error.EmptyPalette, .{});
-    if (k_usize == 0 or k_usize > pal.values.len) return logError(error.InvalidK, .{});
+    if (pal.len == 0) return logError(error.EmptyPalette, .{});
+    if (k_usize == 0 or k_usize > pal.len) return logError(error.InvalidK, .{});
     // Generate "random" centroids
     const centroids: []color.Color = try allocator.alloc(color.Color, k_usize);
     errdefer allocator.free(centroids);
     // Initialize first centroid using frequency
-    centroids[0] = pal.values[0].clr;
+    centroids[0] = pal[0].clr;
     for (centroids[1..], 1..) |*centroid, idx| {
         // Initialize other centroids as furthest color in palette compared to initialized centroids
         var best_score: f32 = 0;
         var best_color: *const color.Color = undefined;
-        for (pal.values) |*val| {
+        for (pal) |*val| {
             var min_dst: f32 = std.math.floatMax(f32);
             for (centroids[0..idx]) |*other| {
                 min_dst = @min(min_dst, other.dst(&val.clr));
@@ -45,7 +45,7 @@ pub fn kmeans(allocator: std.mem.Allocator, pal: *const palette.Palette, k: u32,
         @memset(sum, vecutil.ZeroVec);
         @memset(total_weight, 0.0);
         // Loop through palette
-        for (pal.values) |value| {
+        for (pal) |value| {
             // Update cluster values based on closest one to cluster center
             var best_idx: usize = 0;
             var min_dist: f32 = std.math.floatMax(f32);

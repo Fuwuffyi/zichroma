@@ -4,11 +4,11 @@ const color_rgb = @import("color/color_rgb.zig");
 const color = @import("color/color.zig");
 const logError = @import("error.zig").logError;
 
-pub const Palette = struct {
-    pub const Value = struct { clr: color.Color, weight: f32 };
+pub const ImgValue = struct { clr: color.Color, weight: f32 };
 
+pub const Palette = struct {
     name: []const u8,
-    values: []Value,
+    values: []ImgValue,
 
     pub fn init(allocator: std.mem.Allocator, filepath: []const u8, colorspace: color.ColorSpace) !@This() {
         // Load the image file
@@ -35,7 +35,7 @@ pub const Palette = struct {
             }
         }
         // Directly allocate the result slice with precise sizing
-        const values: []Value = try allocator.alloc(Value, colors_hashmap.count());
+        const values: []ImgValue = try allocator.alloc(ImgValue, colors_hashmap.count());
         // Populate the array directly using iterator
         var it = colors_hashmap.iterator();
         var i: usize = 0;
@@ -50,8 +50,8 @@ pub const Palette = struct {
             values[i] = .{ .clr = clr_rgb.convertTo(colorspace), .weight = entry.value_ptr.* };
         }
         // Sort colors by highest weight first
-        std.mem.sort(Value, values, {}, struct {
-            fn lessThan(_: void, a: Value, b: Value) bool {
+        std.mem.sort(ImgValue, values, {}, struct {
+            fn lessThan(_: void, a: ImgValue, b: ImgValue) bool {
                 return a.weight > b.weight;
             }
         }.lessThan);
@@ -61,7 +61,7 @@ pub const Palette = struct {
         return .{ .name = std.fs.path.basename(filepath), .values = values };
     }
 
-    fn max_weight_normalization(values: []Value) void {
+    fn max_weight_normalization(values: []ImgValue) void {
         const max: f32 = values[0].weight;
         for (values) |*value| value.weight /= max;
     }

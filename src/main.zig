@@ -31,7 +31,7 @@ pub fn main() !void {
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
     // Get clustering data
-    const clusters: []color.Color = try KMeans(allocator, &pal, conf.cluster_count, 600);
+    const clusters: []color.Color = try KMeans(allocator, pal.values, conf.cluster_count, 600);
     defer allocator.free(clusters);
     // Sort based on color theme
     const sort_ctx = struct { light_mode: bool };

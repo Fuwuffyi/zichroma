@@ -108,7 +108,7 @@ pub fn readPaletteCache(allocator: std.mem.Allocator, img_file_path: []const u8,
     const data_length: usize = remaining.len;
     const entries: usize = data_length / entry_size;
     if (data_length % entry_size != 0) return logError(error.InvalidData, .{cache_file});
-    const values: []palette.Palette.Value = try allocator.alloc(palette.Palette.Value, entries);
+    const values: []palette.ImgValue = try allocator.alloc(palette.ImgValue, entries);
     for (0..entries) |i| {
         const bytes: []const u8 = remaining[0..@sizeOf([4]f32)];
         const float_vals: [4]f32 = std.mem.bytesToValue([4]f32, bytes);
