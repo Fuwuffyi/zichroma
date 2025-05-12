@@ -28,12 +28,12 @@ pub fn octree(allocator: std.mem.Allocator, colors: []palette.ImgValue, k: u32) 
     // Add all colors to the palette
     for (colors) |c| {
         try tree.insert(c, bitExtractionFunction);
-        std.debug.print("Test: {}\n", .{ tree.count });
+        std.debug.print("Test: {}\n", .{ tree.len });
     }
     // Merge colors until K colors remain
-    while (tree.count > k) {
+    while (tree.len > k) {
         try tree.mergeSimilar(valueMergeFunction);
-        std.debug.print("Test: {}\n", .{ tree.count });
+        std.debug.print("Test: {}\n", .{ tree.len });
     }
     return try tree.values();
 }

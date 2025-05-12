@@ -36,14 +36,14 @@ pub fn Octree(comptime T: type) type {
 
         allocator: std.mem.Allocator,
         max_depth: usize,
-        count: usize,
+        len: usize,
         root: ?*Node,
 
         pub fn init(allocator: std.mem.Allocator, max_depth: usize) Self {
             return .{
                 .allocator = allocator,
                 .max_depth = max_depth,
-                .count = 0,
+                .len = 0,
                 .root = null,
             };
         }
@@ -53,7 +53,7 @@ pub fn Octree(comptime T: type) type {
                 r.deinit();
                 self.allocator.destroy(r);
                 self.root = null;
-                self.count = 0;
+                self.len = 0;
             }
         }
 
@@ -64,7 +64,7 @@ pub fn Octree(comptime T: type) type {
                 self.root.?.* = Node.init(self.allocator);
             }
             // Start at root
-            var node = self.root.?;
+            var node: *Node = self.root.?;
             for (0..self.max_depth) |_| {
                 const idx: u3 = bit_extract_fn(value);
                 if (node.children[idx] == null) {
@@ -74,16 +74,16 @@ pub fn Octree(comptime T: type) type {
                 node = node.children[idx].?;
             }
             try node.values.append(value);
-            self.count += 1;
+            self.len += 1;
         }
 
         pub fn mergeSimilar(self: *Self, merge_value_fn: MergeValueFn) !void {
             _ = merge_value_fn;
-            self.count -= 1;
+            self.len -= 1;
         }
 
         fn collectLeaves(node: *Node, result: *std.ArrayList(T)) !void {
-            var isLeaf = true;
+            var isLeaf: bool = true;
             for (node.children) |c| {
                 if (c) |_| {
                     isLeaf = false;
@@ -91,7 +91,7 @@ pub fn Octree(comptime T: type) type {
                 }
             }
             if (isLeaf) {
-                const slice = node.values.items[0..node.values.items.len];
+                const slice: []T = node.values.items[0..node.values.items.len];
                 for (slice) |item| {
                     try result.append(item);
                 }
@@ -106,8 +106,8 @@ pub fn Octree(comptime T: type) type {
 
         pub fn values(self: *Self) ![]T {
             if (self.root == null) return &[_]T{};
-            var result = std.ArrayList(T).init(self.allocator);
-            try result.ensureTotalCapacity(self.count);
+            var result: std.ArrayList(T) = std.ArrayList(T).init(self.allocator);
+            try result.ensureTotalCapacity(self.len);
             try collectLeaves(self.root.?, &result);
             return result.toOwnedSlice();
         }
