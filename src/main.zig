@@ -32,7 +32,7 @@ pub fn main() !void {
     // Check if image is light or dark themed
     const is_palette_light: bool = if (conf.theme == .light) true else if (conf.theme == .dark) false else pal.isLight();
     // Get clustering data
-    const merged_colors: []palette.ImgValue = Octree(allocator, pal.values, 64);
+    const merged_colors: []palette.ImgValue = try Octree(allocator, pal.values, 64);
     defer allocator.free(merged_colors);
     const clusters: []color.Color = try KMeans(allocator, merged_colors, conf.cluster_count, 600);
     defer allocator.free(clusters);
