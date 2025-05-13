@@ -6,7 +6,7 @@ const o = @import("../util/octree.zig");
 
 pub fn octree(allocator: std.mem.Allocator, colors: []palette.ImgValue, k: u32) ![]palette.ImgValue {
     // Create an octree
-    var tree: o.Octree(palette.ImgValue) = try o.Octree(palette.ImgValue).init(allocator, 6, 4);
+    var tree: o.Octree(palette.ImgValue) = try o.Octree(palette.ImgValue).init(allocator, 8, 16);
     defer tree.deinit();
     // Create a bit extraction function
     const bitExtractionFunction: o.Octree(palette.ImgValue).ExtractBitFn = struct {
@@ -41,5 +41,7 @@ pub fn octree(allocator: std.mem.Allocator, colors: []palette.ImgValue, k: u32) 
         try tree.merge(valueMergeFunction);
         std.debug.print("Test: {}\n", .{ tree.len });
     }
+    // FIXME: Debug
+    tree.print();
     return try tree.values();
 }
